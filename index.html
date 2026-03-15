@@ -190,6 +190,63 @@ textarea.fi{resize:none;min-height:72px}
   .pg.on{display:flex}
   #drawer{right:calc(50% - 240px)}
 }
+
+/* PROGRESS RING */
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ring-svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--bg4)}
+.ring-fill{fill:none;stroke:var(--g);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.ring-label{font-size:11px;color:var(--t2);text-align:center}
+.ring-val{font-size:13px;font-weight:600;color:var(--g);text-align:center}
+
+/* GOALS GRID */
+.goals-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.goal-card{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:12px;text-align:center}
+.goal-pct{font-size:22px;font-weight:700;color:var(--g);line-height:1}
+.goal-lbl{font-size:11px;color:var(--t2);margin-top:3px}
+.goal-sub{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px}
+.lb-rank{font-size:18px;font-weight:700;width:32px;text-align:center;flex-shrink:0}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-stat{font-size:12px;color:var(--t2);margin-top:2px}
+.lb-val{font-size:16px;font-weight:700;color:var(--g);flex-shrink:0}
+.lb-tabs{display:flex;gap:6px;margin-bottom:14px}
+.lb-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--b);background:transparent;color:var(--t3);font-size:12px;font-weight:500;font-family:var(--font);cursor:pointer;transition:all .15s}
+.lb-tab.on{background:var(--g);color:#0a0a0a;border-color:var(--g)}
+
+/* WEIGHT TRACKER */
+.wt-entry{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:8px}
+.wt-date{font-size:12px;color:var(--t2);flex:1}
+.wt-val{font-size:16px;font-weight:600;color:var(--blu)}
+.wt-diff{font-size:11px;margin-left:4px}
+
+/* PR CARDS */
+.pr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pr-card{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:12px}
+.pr-icon{font-size:20px;margin-bottom:4px}
+.pr-val{font-size:20px;font-weight:700;color:var(--amb);line-height:1}
+.pr-lbl{font-size:11px;color:var(--t2);margin-top:3px}
+.pr-date{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* WORKOUT PLAN */
+.plan-day{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rs);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.plan-day.today{border-color:var(--g);background:var(--gd)}
+.plan-day-name{font-size:12px;font-weight:600;width:34px;flex-shrink:0;color:var(--t2)}
+.plan-day.today .plan-day-name{color:var(--g)}
+.plan-day-muscles{flex:1;font-size:13px;color:var(--t)}
+.plan-day-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--gd);color:var(--g);font-weight:500}
+
+/* SHARE CARD */
+.share-preview{background:linear-gradient(135deg,#0f0f0f 0%,#1a2a1a 100%);border-radius:var(--r);padding:24px;margin-bottom:14px;border:1px solid var(--g)}
+.share-app{font-size:11px;color:var(--g);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.share-user{font-size:16px;font-weight:600;margin-bottom:16px}
+.share-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.share-stat-v{font-size:22px;font-weight:700;color:var(--g);line-height:1}
+.share-stat-l{font-size:10px;color:#666;margin-top:3px}
+.share-date{font-size:11px;color:#444}
 </style>
 </head>
 <body>
@@ -310,6 +367,13 @@ textarea.fi{resize:none;min-height:72px}
           </button>
         </div>
         <div id="pts-bar"></div>
+        <div id="ai-read-wrap" style="display:none;margin-top:8px">
+          <button class="btn bg" id="ai-read-btn" onclick="readWithAI()" style="padding:12px">
+            <svg viewBox="0 0 24 24" stroke-width="2" width="18" height="18" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Read Screen with AI
+          </button>
+        </div>
+        <div id="ai-result" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.7"></div>
       </div>
     </div>
     <div class="card">
@@ -396,9 +460,59 @@ textarea.fi{resize:none;min-height:72px}
 
 <!-- ═══ HISTORY ═══ -->
 <div class="pg" id="pg-hist">
-  <div class="topbar"><div class="topbar-h">📋 History</div></div>
+  <div class="topbar">
+    <div class="topbar-h">📋 History</div>
+    <button class="btn bg" style="width:auto;padding:7px 14px;font-size:12px" onclick="showShareModal()">Share Card</button>
+  </div>
+  <!-- Share Modal -->
+  <div id="share-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:600;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg2);border-radius:var(--r);padding:20px;width:100%;max-width:380px">
+      <div class="cl" style="margin-bottom:14px">Share Your Progress</div>
+      <div class="share-preview" id="share-card">
+        <div class="share-app">⚡ PulseLog</div>
+        <div class="share-user" id="sc-user"></div>
+        <div class="share-stats">
+          <div><div class="share-stat-v" id="sc-km">0</div><div class="share-stat-l">km this week</div></div>
+          <div><div class="share-stat-v" id="sc-cal">0</div><div class="share-stat-l">calories</div></div>
+          <div><div class="share-stat-v" id="sc-sess">0</div><div class="share-stat-l">sessions</div></div>
+        </div>
+        <div class="share-date" id="sc-date"></div>
+      </div>
+      <button class="btn bg gap" onclick="downloadShareCard()">📥 Save as Image</button>
+      <button class="btn bs" onclick="document.getElementById('share-modal').style.display='none'">Close</button>
+    </div>
+  </div>
   <div class="body" id="hist-body">
     <div class="empty"><div class="empty-i">📋</div><p>No sessions yet</p></div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div class="pg" id="pg-settings">
+  <div class="topbar"><div class="topbar-h">⚙️ Settings</div></div>
+  <div class="body">
+    <div class="card">
+      <div class="cl">AI Keys — for photo reading</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:12px;line-height:1.6">
+        These keys enable automatic reading of treadmill screen photos.<br/>
+        Both are <strong style="color:var(--g)">completely free</strong> to get.
+      </div>
+      <div class="fg">
+        <label class="fl">Groq API Key <span style="color:var(--g);text-transform:none;letter-spacing:0">(free — console.groq.com)</span></label>
+        <input class="fi" type="password" id="s-groq" placeholder="gsk_..."/>
+      </div>
+      <div class="fg">
+        <label class="fl">Gemini API Key <span style="color:var(--g);text-transform:none;letter-spacing:0">(free — aistudio.google.com)</span></label>
+        <input class="fi" type="password" id="s-gemini" placeholder="AIzaSy..."/>
+      </div>
+      <button class="btn bg gap" onclick="saveSettings()">💾 Save Keys</button>
+      <button class="btn bs" style="margin-top:8px" onclick="testAIKeys()">🔍 Test Keys</button>
+      <div id="s-test-result" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:13px"></div>
+    </div>
+    <div class="card">
+      <div class="cl">Account</div>
+      <button class="btn bd" onclick="doSignOut()">Sign Out</button>
+    </div>
   </div>
 </div>
 
@@ -418,6 +532,86 @@ textarea.fi{resize:none;min-height:72px}
   </div>
 </div>
 
+
+<!-- ═══ LEADERBOARD ═══ -->
+<div class="pg" id="pg-lb">
+  <div class="topbar"><div class="topbar-h">🏆 Leaderboard</div></div>
+  <div class="body">
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--t2);line-height:1.6">
+        Only users who have opted in appear here. Toggle your visibility in Settings.
+      </div>
+    </div>
+    <div class="lb-tabs">
+      <button class="lb-tab on" id="lbt-km" onclick="setLbTab('km',this)">🏃 Best Run</button>
+      <button class="lb-tab" id="lbt-cal" onclick="setLbTab('cal',this)">🔥 Best Cal</button>
+      <button class="lb-tab" id="lbt-speed" onclick="setLbTab('speed',this)">⚡ Top Speed</button>
+      <button class="lb-tab" id="lbt-days" onclick="setLbTab('days',this)">📅 Active Days</button>
+    </div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:14px;line-height:1.6">
+      Shows each user's personal best — your all-time records across all sessions.
+    </div>
+    <div id="lb-list"><div class="empty"><div class="empty-i">⏳</div><p>Loading...</p></div></div>
+  </div>
+</div>
+
+<!-- ═══ MORE (Goals + Weight + PRs + Plan) ═══ -->
+<div class="pg" id="pg-more">
+  <div class="topbar"><div class="topbar-h">📊 More</div></div>
+  <div class="body">
+
+    <!-- GOALS -->
+    <div class="card">
+      <div class="cl">Weekly Goals</div>
+      <div class="goals-grid" id="goals-display"></div>
+      <button class="btn bs" style="font-size:13px;padding:10px" onclick="openGoalsEdit()">✏️ Edit Goals</button>
+      <div id="goals-edit" style="display:none;margin-top:14px">
+        <div class="g2" style="margin-bottom:10px">
+          <div><label class="fl">Weekly km target</label><input class="fi" type="number" id="g-km" placeholder="e.g. 20"/></div>
+          <div><label class="fl">Weekly cal target</label><input class="fi" type="number" id="g-cal" placeholder="e.g. 2000"/></div>
+        </div>
+        <div class="g2" style="margin-bottom:14px">
+          <div><label class="fl">Workout days/week</label><input class="fi" type="number" id="g-days" placeholder="e.g. 5" min="1" max="7"/></div>
+          <div><label class="fl">Weekly min target</label><input class="fi" type="number" id="g-min" placeholder="e.g. 150"/></div>
+        </div>
+        <button class="btn bg" onclick="saveGoals()">Save Goals</button>
+      </div>
+    </div>
+
+    <!-- PERSONAL RECORDS -->
+    <div class="card">
+      <div class="cl">Personal Records 🏅</div>
+      <div class="pr-grid" id="pr-display">
+        <div class="empty" style="grid-column:1/-1;padding:20px"><p>Log sessions to see your PRs</p></div>
+      </div>
+    </div>
+
+    <!-- WEIGHT TRACKER -->
+    <div class="card">
+      <div class="cl">Body Weight</div>
+      <div class="g2" style="margin-bottom:10px">
+        <div><label class="fl">Date</label><input class="fi" type="date" id="wt-date"/></div>
+        <div><label class="fl">Weight (kg)</label><input class="fi" type="number" step="0.1" id="wt-kg" placeholder="70.5"/></div>
+      </div>
+      <button class="btn bs gap" style="font-size:13px;padding:10px" onclick="saveWeight()">+ Log Weight</button>
+      <canvas id="wt-chart" height="120" style="margin-top:10px"></canvas>
+      <div id="wt-list" style="margin-top:10px"></div>
+    </div>
+
+    <!-- WORKOUT PLAN -->
+    <div class="card">
+      <div class="cl">Weekly Workout Plan</div>
+      <div id="plan-display"></div>
+      <button class="btn bs" style="font-size:13px;padding:10px;margin-top:4px" onclick="openPlanEdit()">✏️ Edit Plan</button>
+      <div id="plan-edit" style="display:none;margin-top:14px">
+        <div id="plan-fields"></div>
+        <button class="btn bg" style="margin-top:8px" onclick="savePlan()">Save Plan</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <nav class="nav" id="nav">
   <button class="nb on" id="nb-dash" onclick="go('dash',this)">
@@ -432,6 +626,12 @@ textarea.fi{resize:none;min-height:72px}
   <button class="nb" id="nb-hist" onclick="go('hist',this)">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
   </button>
+  <button class="nb" id="nb-lb" onclick="go('lb',this)">
+    <svg viewBox="0 0 24 24"><path d="M8 21H5a2 2 0 01-2-2v-5a2 2 0 012-2h3m8 8h3a2 2 0 002-2v-5a2 2 0 00-2-2h-3m-6 9V9a2 2 0 012-2h2a2 2 0 012 2v12"/></svg>Leaderboard
+  </button>
+  <button class="nb" id="nb-more" onclick="go('more',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More
+  </button>
   <button class="nb" id="nb-admin" style="display:none" onclick="go('admin',this)">
     <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin
   </button>
@@ -442,6 +642,12 @@ textarea.fi{resize:none;min-height:72px}
 // CONFIG — hardcoded Firebase
 // ═══════════════════════════════════════
 const ADMIN_UID = 'ByOZfDHHQzWBOfhB9TTFJSUCyNf2' // admin account
+
+// ── AI keys — shared defaults (users can override in Settings) ──
+// Get free Groq key: console.groq.com
+// Get free Gemini key: aistudio.google.com
+const GROQ_KEY_DEFAULT   = '' // paste your Groq key here
+const GEMINI_KEY_DEFAULT = '' // paste your Gemini key here
 
 // ═══════════════════════════════════════
 // STATE
@@ -620,6 +826,7 @@ function go(name, btn){
     document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'))
     btn.classList.add('on')
   }
+  if(name==='settings') loadSettingsUI()
   if(name==='tread') setNow('t')
   if(name==='work')  setNow('w')
   if(name==='hist')  loadHist()
@@ -710,6 +917,9 @@ function onPhoto(e){
     bar.style.display = 'block'
     document.getElementById('t-date').style.borderColor = 'var(--g)'
     document.getElementById('t-time').style.borderColor = 'var(--g)'
+    // Show AI read button now that we have a photo
+    document.getElementById('ai-read-wrap').style.display = 'block'
+    document.getElementById('ai-result').style.display = 'none'
 
     // ── Compress image to Base64 for Firestore storage ──
     compressToBase64(file, (b64, sizeKB)=>{
@@ -719,6 +929,127 @@ function onPhoto(e){
     })
   }
   reader.readAsArrayBuffer(file)
+}
+
+async function readWithAI(){
+  if(!pendingB64){ toast('⚠️ Please select a photo first'); return }
+
+  const btn = document.getElementById('ai-read-btn')
+  const resultBox = document.getElementById('ai-result')
+  btn.disabled = true
+  btn.textContent = '⏳ Reading screen...'
+  resultBox.style.display = 'none'
+
+  // Get keys — user setting overrides shared default
+  const userSettings = JSON.parse(localStorage.getItem('pl_settings') || '{}')
+  const groqKey   = userSettings.groqKey   || GROQ_KEY_DEFAULT
+  const geminiKey = userSettings.geminiKey || GEMINI_KEY_DEFAULT
+
+  const prompt = `This is a treadmill display screen photo. Extract these exact values shown on the screen:
+1. Distance in km (if shown in miles convert to km by multiplying by 1.609)
+2. Calories burned
+3. Duration or elapsed time in minutes (if shown as MM:SS convert to decimal minutes)
+4. Current speed in km/h (if in mph multiply by 1.609)
+Reply in EXACTLY this format with numbers only, nothing else:
+km=X calories=X duration=X speed=X
+If any value is not visible use 0.`
+
+  let extracted = null
+  let usedModel = ''
+
+  // ── Try Groq first ──────────────────────────────────────────────────
+  if(groqKey){
+    try{
+      btn.textContent = '⏳ Trying Groq AI...'
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+        body:JSON.stringify({
+          model:'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages:[{role:'user',content:[
+            {type:'text',text:prompt},
+            {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+pendingB64}}
+          ]}],
+          max_tokens:60
+        })
+      })
+      if(res.ok){
+        const d = await res.json()
+        const txt = d.choices?.[0]?.message?.content || ''
+        extracted = parseAIResponse(txt)
+        if(extracted) usedModel = 'Groq (llama-4-scout)'
+      }
+    }catch(e){ console.warn('Groq failed:', e.message) }
+  }
+
+  // ── Fallback to Gemini ──────────────────────────────────────────────
+  if(!extracted && geminiKey){
+    try{
+      btn.textContent = '⏳ Trying Gemini AI...'
+      const models = ['gemini-2.0-flash-lite','gemini-2.0-flash','gemini-1.5-flash']
+      for(const model of models){
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+          { method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{parts:[
+              {text:prompt},
+              {inlineData:{mimeType:'image/jpeg',data:pendingB64}}
+            ]}]})
+          }
+        )
+        if(res.ok){
+          const d = await res.json()
+          const txt = d.candidates?.[0]?.content?.parts?.[0]?.text || ''
+          extracted = parseAIResponse(txt)
+          if(extracted){ usedModel = 'Gemini ('+model+')'; break }
+        } else if(res.status === 429 || res.status === 404){
+          continue
+        } else { break }
+      }
+    }catch(e){ console.warn('Gemini failed:', e.message) }
+  }
+
+  // ── Show result ─────────────────────────────────────────────────────
+  if(extracted && (extracted.km > 0 || extracted.cal > 0 || extracted.dur > 0)){
+    // Auto-fill fields
+    if(extracted.km  > 0) document.getElementById('t-km').value   = extracted.km.toFixed(2)
+    if(extracted.cal > 0) document.getElementById('t-cal').value  = extracted.cal
+    if(extracted.dur > 0) document.getElementById('t-dur').value  = extracted.dur
+    calcSpd()
+
+    resultBox.style.background = 'rgba(0,229,160,0.08)'
+    resultBox.style.border = '1px solid var(--g)'
+    resultBox.style.color = 'var(--g)'
+    resultBox.innerHTML = `✅ <strong>Read by ${usedModel}</strong><br/>
+      ${extracted.km > 0 ? '🏃 '+extracted.km.toFixed(2)+' km &nbsp;' : ''}
+      ${extracted.cal > 0 ? '🔥 '+extracted.cal+' cal &nbsp;' : ''}
+      ${extracted.dur > 0 ? '⏱ '+extracted.dur+' min &nbsp;' : ''}
+      ${extracted.spd > 0 ? '⚡ '+extracted.spd+' km/h' : ''}<br/>
+      <span style="font-size:11px;opacity:.7">Fields filled — edit below if needed</span>`
+  } else if(!groqKey && !geminiKey){
+    resultBox.style.background = 'rgba(255,184,48,0.08)'
+    resultBox.style.border = '1px solid var(--amb)'
+    resultBox.style.color = 'var(--amb)'
+    resultBox.innerHTML = '⚠️ <strong>No AI key configured</strong><br/>Go to Settings → add your Groq or Gemini API key to enable photo reading.<br/><span style="font-size:11px;opacity:.7">Both are free to get.</span>'
+  } else {
+    resultBox.style.background = 'rgba(255,71,87,0.08)'
+    resultBox.style.border = '1px solid var(--red)'
+    resultBox.style.color = 'var(--red)'
+    resultBox.innerHTML = '❌ Could not read values from photo.<br/><span style="font-size:11px;opacity:.7">Try a clearer photo with good lighting. Fill values manually below.</span>'
+  }
+  resultBox.style.display = 'block'
+  btn.disabled = false
+  btn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" width="18" height="18" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Read Screen with AI'
+}
+
+function parseAIResponse(txt){
+  if(!txt) return null
+  const km  = parseFloat(txt.match(/km=([\d.]+)/i)?.[1]  || 0)
+  const cal = parseInt(txt.match(/calories=([\d.]+)/i)?.[1] || 0)
+  const dur = parseFloat(txt.match(/duration=([\d.]+)/i)?.[1] || 0)
+  const spd = parseFloat(txt.match(/speed=([\d.]+)/i)?.[1] || 0)
+  if(km===0 && cal===0 && dur===0) return null
+  return {km, cal, dur, spd}
 }
 
 function compressToBase64(file, cb){
@@ -844,6 +1175,7 @@ async function saveTread(){
     toast('✅ Session saved!')
     resetTread()
     loadDash()
+    refreshMyLeaderboardEntry() // update leaderboard with new bests
   }catch(e){ toast('❌ '+e.message) }
   btn.disabled=false; btn.textContent='Save Session'
 }
@@ -858,6 +1190,8 @@ function resetTread(){
   document.getElementById('pts-bar').style.display='none'
   document.getElementById('pc').value=''
   document.getElementById('pg-file').value=''
+  document.getElementById('ai-read-wrap').style.display='none'
+  document.getElementById('ai-result').style.display='none'
   pendingFile=null
   pendingB64=null
   setNow('t')
@@ -889,6 +1223,7 @@ async function saveWork(){
     toast('✅ Workout saved!')
     resetWork()
     loadDash()
+    refreshMyLeaderboardEntry() // update total days
   }catch(e){ toast('❌ '+e.message) }
   btn.disabled=false; btn.textContent='Save Workout'
 }
@@ -1078,9 +1413,456 @@ async function exportCSV(type){
 }
 
 // ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+function loadSettingsUI(){
+  const s = JSON.parse(localStorage.getItem('pl_settings') || '{}')
+  document.getElementById('s-groq').value   = s.groqKey   || ''
+  document.getElementById('s-gemini').value = s.geminiKey || ''
+}
+
+function saveSettings(){
+  const s = {
+    groqKey:   document.getElementById('s-groq').value.trim(),
+    geminiKey: document.getElementById('s-gemini').value.trim()
+  }
+  localStorage.setItem('pl_settings', JSON.stringify(s))
+  toast('✅ Keys saved!')
+}
+
+async function testAIKeys(){
+  const s = JSON.parse(localStorage.getItem('pl_settings') || '{}')
+  const groqKey   = s.groqKey   || GROQ_KEY_DEFAULT
+  const geminiKey = s.geminiKey || GEMINI_KEY_DEFAULT
+  const box = document.getElementById('s-test-result')
+  box.style.display = 'block'
+  box.style.background = 'rgba(77,166,255,0.08)'
+  box.style.border = '1px solid var(--blu)'
+  box.style.color = 'var(--blu)'
+  box.textContent = '⏳ Testing keys...'
+
+  let results = []
+
+  if(groqKey){
+    try{
+      const res = await fetch('https://api.groq.com/openai/v1/models',{
+        headers:{'Authorization':'Bearer '+groqKey}
+      })
+      results.push(res.ok ? '✅ Groq key is valid' : '❌ Groq key invalid ('+res.status+')')
+    }catch(e){ results.push('❌ Groq: '+e.message) }
+  } else { results.push('⚠️ No Groq key set') }
+
+  if(geminiKey){
+    try{
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts:[{text:'hi'}]}]}) }
+      )
+      results.push(res.ok ? '✅ Gemini key is valid' : '❌ Gemini key invalid ('+res.status+')')
+    }catch(e){ results.push('❌ Gemini: '+e.message) }
+  } else { results.push('⚠️ No Gemini key set') }
+
+  box.style.background = 'rgba(0,229,160,0.08)'
+  box.style.border = '1px solid var(--g)'
+  box.style.color = 'var(--t)'
+  box.innerHTML = results.join('<br/>')
+}
+
+
+// ═══════════════════════════════════════
+// GOALS
+// ═══════════════════════════════════════
+let goalsData = {}
+let wtChart = null
+
+function openGoalsEdit(){
+  const ed = document.getElementById('goals-edit')
+  ed.style.display = ed.style.display==='none' ? 'block' : 'none'
+  if(ed.style.display==='block'){
+    const g = JSON.parse(localStorage.getItem('goals')||'{}')
+    document.getElementById('g-km').value   = g.km   || ''
+    document.getElementById('g-cal').value  = g.cal  || ''
+    document.getElementById('g-days').value = g.days || ''
+    document.getElementById('g-min').value  = g.min  || ''
+  }
+}
+
+function saveGoals(){
+  const g = {
+    km:   parseFloat(document.getElementById('g-km').value)||0,
+    cal:  parseFloat(document.getElementById('g-cal').value)||0,
+    days: parseInt(document.getElementById('g-days').value)||0,
+    min:  parseInt(document.getElementById('g-min').value)||0
+  }
+  localStorage.setItem('goals', JSON.stringify(g))
+  document.getElementById('goals-edit').style.display = 'none'
+  toast('✅ Goals saved!')
+  renderGoals()
+}
+
+async function renderGoals(){
+  const g = JSON.parse(localStorage.getItem('goals')||'{}')
+  if(!user) return
+  // Get this week's data
+  const monday = new Date()
+  monday.setDate(monday.getDate() - (monday.getDay()===0?6:monday.getDay()-1))
+  const weekStart = ldk(monday)
+
+  const [ts,ws] = await Promise.all([
+    db.collection(`users/${user.uid}/treadmill`).where('date','>=',weekStart).get(),
+    db.collection(`users/${user.uid}/workouts`).where('date','>=',weekStart).get()
+  ])
+  const tm = ts.docs.map(d=>d.data())
+  const wo = ws.docs.map(d=>d.data())
+  const allDates = new Set([...tm.map(r=>r.date),...wo.map(r=>r.date)])
+
+  const actual = {
+    km:   tm.reduce((s,r)=>s+(r.distance_km||0),0),
+    cal:  tm.reduce((s,r)=>s+(r.calories||0),0),
+    days: allDates.size,
+    min:  tm.reduce((s,r)=>s+(r.duration_min||0),0)
+  }
+
+  const goals = [
+    {key:'km',   label:'km',      unit:'km',  icon:'🏃'},
+    {key:'cal',  label:'calories',unit:'cal', icon:'🔥'},
+    {key:'days', label:'days',    unit:'days',icon:'📅'},
+    {key:'min',  label:'minutes', unit:'min', icon:'⏱'},
+  ]
+
+  const el = document.getElementById('goals-display')
+  el.innerHTML = goals.map(({key,label,unit,icon})=>{
+    const target = g[key]||0
+    const current = actual[key]||0
+    const pct = target>0 ? Math.min(Math.round(current/target*100),100) : 0
+    const color = pct>=100?'var(--g)':pct>=60?'var(--amb)':'var(--t3)'
+    return `<div class="goal-card">
+      <div style="font-size:22px;margin-bottom:4px">${icon}</div>
+      <div class="goal-pct" style="color:${color}">${pct}%</div>
+      <div class="goal-lbl">${label}</div>
+      <div class="goal-sub">${current.toFixed(key==='km'?1:0)} / ${target||'—'} ${unit}</div>
+      ${pct>=100?'<div style="font-size:11px;color:var(--g);margin-top:4px">🎯 Goal reached!</div>':''}
+    </div>`
+  }).join('')
+}
+
+// ═══════════════════════════════════════
+// PERSONAL RECORDS
+// ═══════════════════════════════════════
+async function renderPRs(){
+  if(!user) return
+  const snap = await db.collection(`users/${user.uid}/treadmill`).get()
+  const tm = snap.docs.map(d=>d.data())
+  if(!tm.length){ return }
+
+  const prs = [
+    {key:'distance_km',  label:'Longest Run',     unit:'km', icon:'🏃', fmt:v=>v.toFixed(2)},
+    {key:'calories',     label:'Most Calories',   unit:'cal',icon:'🔥', fmt:v=>v.toLocaleString()},
+    {key:'avg_speed_kmh',label:'Fastest Speed',   unit:'km/h',icon:'⚡',fmt:v=>v.toFixed(2)},
+    {key:'duration_min', label:'Longest Session', unit:'min',icon:'⏱', fmt:v=>v},
+  ]
+
+  const el = document.getElementById('pr-display')
+  el.innerHTML = prs.map(({key,label,unit,icon,fmt})=>{
+    const best = tm.reduce((b,r)=> (r[key]||0)>(b[key]||0)?r:b, tm[0])
+    const val = best[key]||0
+    if(!val) return ''
+    return `<div class="pr-card">
+      <div class="pr-icon">${icon}</div>
+      <div class="pr-val">${fmt(val)}</div>
+      <div class="pr-lbl">${label}</div>
+      <div class="pr-unit" style="font-size:10px;color:var(--t3)">${unit}</div>
+      <div class="pr-date">${best.date?fmt_(best.date):''}</div>
+    </div>`
+  }).filter(Boolean).join('')
+}
+
+function fmt_(dateStr){ return parseLocalDate(dateStr).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}) }
+function parseLocalDate(s){ if(!s)return new Date(); const p=String(s).split('-'); return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(s) }
+
+// ═══════════════════════════════════════
+// WEIGHT TRACKER
+// ═══════════════════════════════════════
+async function saveWeight(){
+  if(!user){ toast('Please sign in'); return }
+  const date = document.getElementById('wt-date').value
+  const kg   = parseFloat(document.getElementById('wt-kg').value)
+  if(!date||!kg){ toast('⚠️ Date and weight required'); return }
+  await db.doc(`users/${user.uid}/weight/${date}`).set({
+    date, kg, userId:user.uid,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  })
+  document.getElementById('wt-kg').value = ''
+  toast('✅ Weight logged!')
+  loadWeightData()
+}
+
+async function loadWeightData(){
+  if(!user) return
+  const snap = await db.collection(`users/${user.uid}/weight`).orderBy('date','desc').limit(30).get()
+  const rows = snap.docs.map(d=>d.data()).reverse()
+  if(!rows.length) return
+
+  // Chart
+  const ctx = document.getElementById('wt-chart').getContext('2d')
+  if(wtChart) wtChart.destroy()
+  wtChart = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels: rows.map(r=>fmt(r.date,{day:'numeric',month:'short'})),
+      datasets:[{
+        data: rows.map(r=>r.kg),
+        borderColor:'#4da6ff',
+        backgroundColor:'rgba(77,166,255,0.1)',
+        borderWidth:2, pointRadius:3, pointBackgroundColor:'#4da6ff',
+        tension:0.3, fill:true
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y} kg`}}},
+      scales:{
+        y:{ticks:{color:'#555',font:{size:10},callback:v=>v+'kg'},grid:{color:'rgba(255,255,255,0.04)'}},
+        x:{ticks:{color:'#555',font:{size:10},maxRotation:0},grid:{display:false}}
+      }
+    }
+  })
+
+  // List — last 5
+  const list = document.getElementById('wt-list')
+  const recent = [...rows].reverse().slice(0,5)
+  list.innerHTML = recent.map((r,i)=>{
+    const prev = recent[i+1]
+    const diff = prev ? (r.kg - prev.kg) : 0
+    const diffStr = diff!==0 ? `<span class="wt-diff" style="color:${diff<0?'var(--g)':'var(--red)'}">${diff>0?'+':''}${diff.toFixed(1)}kg</span>` : ''
+    return `<div class="wt-entry">
+      <div class="wt-date">${fmt(r.date,{weekday:'short',day:'numeric',month:'short'})}</div>
+      <div class="wt-val">${r.kg} kg ${diffStr}</div>
+    </div>`
+  }).join('')
+}
+
+// ═══════════════════════════════════════
+// WORKOUT PLAN
+// ═══════════════════════════════════════
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+const MUSCLE_OPTS = ['Chest','Back','Legs','Shoulders','Biceps','Triceps','Core / Abs','Cardio','Rest Day']
+
+function openPlanEdit(){
+  const ed = document.getElementById('plan-edit')
+  ed.style.display = ed.style.display==='none' ? 'block' : 'none'
+  if(ed.style.display==='block'){
+    const plan = JSON.parse(localStorage.getItem('workoutPlan')||'{}')
+    document.getElementById('plan-fields').innerHTML = DAYS.map((day,i)=>`
+      <div class="fg">
+        <label class="fl">${day}</label>
+        <select class="fi" id="pd-${i}">
+          <option value="">— Select —</option>
+          ${MUSCLE_OPTS.map(m=>`<option value="${m}" ${plan[i]===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>`).join('')
+  }
+}
+
+function savePlan(){
+  const plan = {}
+  DAYS.forEach((_,i)=>{
+    const v = document.getElementById('pd-'+i)?.value
+    if(v) plan[i] = v
+  })
+  localStorage.setItem('workoutPlan', JSON.stringify(plan))
+  document.getElementById('plan-edit').style.display = 'none'
+  toast('✅ Plan saved!')
+  renderPlan()
+}
+
+function renderPlan(){
+  const plan = JSON.parse(localStorage.getItem('workoutPlan')||'{}')
+  const todayIdx = (new Date().getDay()+6)%7 // Mon=0
+  const el = document.getElementById('plan-display')
+  if(!Object.keys(plan).length){
+    el.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:8px 0">No plan set — tap Edit Plan to create your weekly schedule</div>'
+    return
+  }
+  el.innerHTML = DAYS.map((day,i)=>{
+    const muscle = plan[i] || ''
+    const isToday = i === todayIdx
+    const isRest = muscle === 'Rest Day'
+    return `<div class="plan-day ${isToday?'today':''}">
+      <div class="plan-day-name">${day.slice(0,3)}</div>
+      <div class="plan-day-muscles" style="color:${isRest?'var(--t3)':isToday?'var(--g)':'var(--t)'}">${muscle||'—'}</div>
+      ${isToday&&muscle?`<div class="plan-day-tag">Today</div>`:''}
+    </div>`
+  }).join('')
+}
+
+// ═══════════════════════════════════════
+// LEADERBOARD
+// ═══════════════════════════════════════
+let lbTab = 'km'
+
+function setLbTab(tab, btn){
+  lbTab = tab
+  document.querySelectorAll('.lb-tab').forEach(b=>b.classList.remove('on'))
+  btn.classList.add('on')
+  loadLeaderboard()
+}
+
+async function loadLeaderboard(){
+  const el = document.getElementById('lb-list')
+  el.innerHTML = '<div class="empty"><div class="empty-i">⏳</div><p>Loading...</p></div>'
+  try{
+    // Each user publishes their own best stats to a public leaderboard collection
+    // when they save a session — no cross-user data reading needed
+    const snap = await db.collection('leaderboard').get()
+    let entries = snap.docs.map(d=>d.data())
+
+    // Also make sure current user's entry is up to date
+    if(user){
+      await refreshMyLeaderboardEntry()
+      // re-fetch to include updated entry
+      const snap2 = await db.collection('leaderboard').get()
+      entries = snap2.docs.map(d=>d.data())
+    }
+
+    if(!entries.length){
+      el.innerHTML = '<div class="empty"><div class="empty-i">🏆</div><p>No entries yet — save a session to appear here!</p></div>'
+      return
+    }
+
+    // Sort by selected tab
+    const sortKey = {
+      'km':    'best_km',
+      'cal':   'best_cal',
+      'speed': 'best_speed',
+      'days':  'total_days'
+    }[lbTab] || 'best_km'
+
+    entries.sort((a,b)=>(b[sortKey]||0)-(a[sortKey]||0))
+
+    const medals = ['🥇','🥈','🥉']
+    const tabLabels = {
+      km:    e=>`🏃 ${e.best_km||0} km best run`,
+      cal:   e=>`🔥 ${(e.best_cal||0).toLocaleString()} cal best session`,
+      speed: e=>`⚡ ${e.best_speed||0} km/h top speed`,
+      days:  e=>`📅 ${e.total_days||0} total active days`
+    }
+    const subLabels = {
+      km:    e=>`Total: ${e.total_km||0} km · ${e.total_sessions||0} sessions`,
+      cal:   e=>`Total: ${(e.total_cal||0).toLocaleString()} cal · ${e.total_sessions||0} sessions`,
+      speed: e=>`Best run: ${e.best_km||0} km · ${e.total_sessions||0} sessions`,
+      days:  e=>`Total: ${e.total_km||0} km · ${e.total_sessions||0} sessions`
+    }
+
+    el.innerHTML = entries.map((e,i)=>{
+      const isMe = user && e.uid === user.uid
+      const mainVal = tabLabels[lbTab]?.(e) || ''
+      const sub = subLabels[lbTab]?.(e) || ''
+      return `<div class="lb-row" style="${isMe?'border-color:var(--g);background:var(--gd)':''}">
+        <div class="lb-rank">${medals[i]||(i+1)}</div>
+        <div class="lb-info">
+          <div class="lb-name">${e.displayName||'User'} ${isMe?'<span style="font-size:10px;color:var(--g)">(you)</span>':''}</div>
+          <div class="lb-stat">${sub}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="lb-val" style="font-size:13px">${mainVal}</div>
+        </div>
+      </div>`
+    }).join('')
+  }catch(e){
+    el.innerHTML = `<div class="empty"><p>Error: ${e.message}</p></div>`
+  }
+}
+
+// Publish this user's best stats to the public leaderboard collection
+// Called after every save — only writes aggregated bests, no session details
+async function refreshMyLeaderboardEntry(){
+  if(!user) return
+  try{
+    const snap = await db.collection(`users/${user.uid}/treadmill`).get()
+    const tm = snap.docs.map(d=>d.data())
+    if(!tm.length) return
+
+    const woSnap = await db.collection(`users/${user.uid}/workouts`).get()
+    const wo = woSnap.docs.map(d=>d.data())
+    const allDates = new Set([...tm.map(r=>r.date),...wo.map(r=>r.date)])
+
+    const entry = {
+      uid:            user.uid,
+      displayName:    user.displayName || 'User',
+      // Personal bests — single session records
+      best_km:        parseFloat(Math.max(...tm.map(r=>r.distance_km||0)).toFixed(2)),
+      best_cal:       Math.max(...tm.map(r=>r.calories||0)),
+      best_speed:     parseFloat(Math.max(...tm.map(r=>r.avg_speed_kmh||0)).toFixed(2)),
+      best_duration:  Math.max(...tm.map(r=>r.duration_min||0)),
+      // All-time totals
+      total_km:       parseFloat(tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1)),
+      total_cal:      tm.reduce((s,r)=>s+(r.calories||0),0),
+      total_sessions: tm.length,
+      total_days:     allDates.size,
+      updatedAt:      firebase.firestore.FieldValue.serverTimestamp()
+    }
+
+    await db.collection('leaderboard').doc(user.uid).set(entry)
+  }catch(e){ console.error('Leaderboard refresh error:', e) }
+}
+
+
+// ═══════════════════════════════════════
+// SHARE WORKOUT CARD
+// ═══════════════════════════════════════
+async function showShareModal(){
+  if(!user) return
+  const monday = new Date()
+  monday.setDate(monday.getDate()-(monday.getDay()===0?6:monday.getDay()-1))
+  const weekStart = ldk(monday)
+  const [ts,ws] = await Promise.all([
+    db.collection(`users/${user.uid}/treadmill`).where('date','>=',weekStart).get(),
+    db.collection(`users/${user.uid}/workouts`).where('date','>=',weekStart).get()
+  ])
+  const tm = ts.docs.map(d=>d.data())
+  const wo = ws.docs.map(d=>d.data())
+  const allDates = new Set([...tm.map(r=>r.date),...wo.map(r=>r.date)])
+
+  document.getElementById('sc-user').textContent  = user.displayName || 'PulseLog User'
+  document.getElementById('sc-km').textContent    = tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1)
+  document.getElementById('sc-cal').textContent   = tm.reduce((s,r)=>s+(r.calories||0),0).toLocaleString()
+  document.getElementById('sc-sess').textContent  = allDates.size
+  document.getElementById('sc-date').textContent  = 'Week of '+monday.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})
+  document.getElementById('share-modal').style.display = 'flex'
+}
+
+async function downloadShareCard(){
+  // Use html2canvas if available, else copy text summary
+  const card = document.getElementById('share-card')
+  if(typeof html2canvas !== 'undefined'){
+    const canvas = await html2canvas(card,{backgroundColor:'#0f0f0f',scale:2})
+    const a = document.createElement('a')
+    a.download = 'pulselog-week.png'
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+  } else {
+    // Text fallback — copy to clipboard
+    const km   = document.getElementById('sc-km').textContent
+    const cal  = document.getElementById('sc-cal').textContent
+    const sess = document.getElementById('sc-sess').textContent
+    const date = document.getElementById('sc-date').textContent
+    const text = `⚡ PulseLog Weekly\n${user.displayName||''}\n🏃 ${km} km  🔥 ${cal} cal  📅 ${sess} days\n${date}`
+    navigator.clipboard.writeText(text).then(()=>toast('✅ Copied to clipboard!')).catch(()=>toast('⚠️ Could not copy'))
+  }
+}
+
+// ═══════════════════════════════════════
+// UPDATE go() TO HANDLE NEW SCREENS
+// ═══════════════════════════════════════
+
+
+// ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 setNow('t'); setNow('w')
 </script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </body>
 </html>
