@@ -12,7 +12,6 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-auth-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-firestore-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-storage-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -119,8 +118,6 @@ textarea.fi{resize:none;min-height:72px}
 #photo-prev{width:100%;border-radius:var(--rs);margin-bottom:8px;display:none;max-height:200px;object-fit:cover}
 .pbrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 #pts-bar{display:none;background:var(--gd);border:1px solid var(--g);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--g);font-weight:500;text-align:center}
-.uprog{height:3px;background:var(--b);border-radius:2px;overflow:hidden;margin-top:8px;display:none}
-.uprog-bar{height:100%;background:var(--g);border-radius:2px;transition:width .3s;width:0}
 
 /* HISTORY */
 .hi{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
@@ -312,7 +309,6 @@ textarea.fi{resize:none;min-height:72px}
             <span style="font-size:12px">Gallery</span>
           </button>
         </div>
-        <div class="uprog" id="uprog"><div class="uprog-bar" id="uprog-bar"></div></div>
         <div id="pts-bar"></div>
       </div>
     </div>
@@ -483,28 +479,30 @@ function boot(){
 
   auth    = firebase.auth()
   db      = firebase.firestore()
-  storage = firebase.storage()
 
-  // handle redirect result (comes back after Google login redirect)
-  auth.getRedirectResult().then(r=>{
-    if(r && r.user){
-      console.log('Signed in via redirect:', r.user.email)
+  // STEP 1: check for redirect result first
+  // This runs when Google sends user back after signInWithRedirect
+  auth.getRedirectResult().then(async result => {
+    if(result && result.user){
+      // redirect login succeeded — onAuthStateChanged will fire next
+      console.log('Redirect sign-in OK:', result.user.email)
     }
-  }).catch(e=>{
-    console.error('Redirect result error:', e.code, e.message)
-    // only show to user if it's a real error, not just no redirect pending
-    if(e.code && !['auth/no-current-user','auth/null-user'].includes(e.code)){
-      const errEl = document.getElementById('login-err')
-      if(errEl) errEl.textContent = 'Sign-in error: ' + e.message
+  }).catch(e => {
+    console.error('getRedirectResult error:', e.code, e.message)
+    const errEl = document.getElementById('login-err')
+    if(errEl && e.code && e.code !== 'auth/no-current-user'){
+      errEl.textContent = 'Sign-in failed: ' + e.message
+      const btn = document.getElementById('btn-google')
+      if(btn){ btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google' }
     }
   })
 
-  // listen for auth state changes
-  auth.onAuthStateChanged(async u=>{
+  // STEP 2: listen for auth state — this fires after both popup and redirect logins
+  auth.onAuthStateChanged(async u => {
     document.getElementById('loader').style.display = 'none'
     if(u){
       user = u
-      console.log('✅ Your UID (copy this for ADMIN_UID):', u.uid)
+      console.log('✅ LOGGED IN — Your UID:', u.uid)
       await saveProfile(u)
       setupUI(u)
       go('dash')
@@ -513,7 +511,6 @@ function boot(){
       loadDash()
     } else {
       user = null
-      // show login, hide everything else
       document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'))
       document.getElementById('pg-login').classList.add('on')
       document.getElementById('nav').classList.remove('on')
@@ -531,35 +528,53 @@ document.addEventListener('DOMContentLoaded', ()=>waitForFirebase(boot))
 async function doSignIn(){
   const btn = document.getElementById('btn-google')
   const err = document.getElementById('login-err')
+  btn.disabled = true
+  err.textContent = ''
+
   const resetBtn = ()=>{
     btn.disabled = false
     btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google'
   }
-  btn.disabled = true
-  btn.textContent = 'Opening Google...'
-  err.textContent = ''
 
   const provider = new firebase.auth.GoogleAuthProvider()
   provider.setCustomParameters({prompt:'select_account'})
 
-  try{
-    // Try popup first (works on desktop and most mobile browsers)
-    await auth.signInWithPopup(provider)
-    // onAuthStateChanged will handle the rest
-  }catch(popupErr){
-    // Popup blocked or failed — try redirect
-    const blocked = ['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request']
-    if(blocked.includes(popupErr.code)){
-      try{
-        btn.textContent = 'Redirecting to Google...'
-        await auth.signInWithRedirect(provider)
-      }catch(redirErr){
-        err.textContent = redirErr.message
+  // On mobile, redirect is more reliable
+  // On desktop, popup works better
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+  if(isMobile){
+    // Mobile: use redirect
+    btn.textContent = 'Opening Google...'
+    try{
+      await auth.signInWithRedirect(provider)
+      // page will redirect — nothing runs after this
+    }catch(e){
+      err.textContent = e.message
+      resetBtn()
+    }
+  } else {
+    // Desktop: use popup
+    btn.textContent = 'Opening Google...'
+    try{
+      await auth.signInWithPopup(provider)
+      // onAuthStateChanged fires automatically
+    }catch(e){
+      if(['auth/popup-blocked','auth/popup-closed-by-user'].includes(e.code)){
+        // popup was blocked — fall back to redirect
+        try{
+          btn.textContent = 'Redirecting...'
+          await auth.signInWithRedirect(provider)
+        }catch(e2){
+          err.textContent = e2.message
+          resetBtn()
+        }
+      } else if(e.code === 'auth/cancelled-popup-request'){
+        resetBtn()
+      } else {
+        err.textContent = e.message
         resetBtn()
       }
-    } else {
-      err.textContent = popupErr.code + ': ' + popupErr.message
-      resetBtn()
     }
   }
 }
@@ -656,36 +671,142 @@ function onChip(cb){
 // PHOTO
 // ═══════════════════════════════════════
 function onPhoto(e){
-  const file=e.target.files[0]; if(!file) return
+  const file = e.target.files[0]
+  if(!file) return
   pendingFile = file
-  const fd=new Date(file.lastModified)
-  const imgDate=fd.getFullYear()+'-'+pad(fd.getMonth()+1)+'-'+pad(fd.getDate())
-  const imgTime=pad(fd.getHours())+':'+pad(fd.getMinutes())
-  document.getElementById('t-date').value=imgDate
-  document.getElementById('t-time').value=imgTime
-  const bar=document.getElementById('pts-bar')
-  const period=fd.getHours()<12?'Morning':fd.getHours()<17?'Afternoon':'Evening'
-  bar.textContent=`📸 ${fmt(imgDate,{weekday:'short',day:'numeric',month:'short',year:'numeric'})} at ${imgTime} (${period})`
-  bar.style.display='block'
-  const r=new FileReader()
-  r.onload=ev=>{ const p=document.getElementById('photo-prev'); p.src=ev.target.result; p.style.display='block' }
-  r.readAsDataURL(file)
+
+  // Show preview immediately using object URL
+  const prev = document.getElementById('photo-prev')
+  prev.src = URL.createObjectURL(file)
+  prev.style.display = 'block'
+
+  // Read as ArrayBuffer to extract EXIF date AND compress
+  const reader = new FileReader()
+  reader.onload = ev => {
+    // ── Extract EXIF date ──
+    let captureDate = null
+    try{
+      const arr = new Uint8Array(ev.target.result)
+      const exifDate = extractExifDate(arr)
+      if(exifDate){ captureDate = exifDate; captureDate._src = 'exif' }
+    }catch(ex){}
+
+    if(!captureDate){
+      const lm = new Date(file.lastModified)
+      const isNow = (Date.now() - file.lastModified) < 10000
+      if(!isNow){ captureDate = lm; captureDate._src = 'lastmodified' }
+    }
+    if(!captureDate){ captureDate = new Date(); captureDate._src = 'manual' }
+
+    const imgDate = captureDate.getFullYear()+'-'+pad(captureDate.getMonth()+1)+'-'+pad(captureDate.getDate())
+    const imgTime = pad(captureDate.getHours())+':'+pad(captureDate.getMinutes())
+    document.getElementById('t-date').value = imgDate
+    document.getElementById('t-time').value = imgTime
+
+    const bar = document.getElementById('pts-bar')
+    const period = captureDate.getHours()<12?'Morning':captureDate.getHours()<17?'Afternoon':'Evening'
+    const srcLabel = {'exif':'📸 Capture time from photo','lastmodified':'📁 File timestamp','manual':'⚠️ Please set date and time manually'}[captureDate._src]
+    bar.innerHTML = srcLabel+'<br/><strong>'+fmt(imgDate,{weekday:'long',day:'numeric',month:'short',year:'numeric'})+' at '+imgTime+' ('+period+')</strong><br/><span style="font-size:11px;opacity:.7">Edit fields below if incorrect</span>'
+    bar.style.display = 'block'
+    document.getElementById('t-date').style.borderColor = 'var(--g)'
+    document.getElementById('t-time').style.borderColor = 'var(--g)'
+
+    // ── Compress image to Base64 for Firestore storage ──
+    compressToBase64(file, (b64, sizeKB)=>{
+      pendingB64 = b64
+      const bar2 = document.getElementById('pts-bar')
+      bar2.innerHTML += '<br/><span style="font-size:11px;opacity:.7">📦 Compressed to '+sizeKB+'KB — ready to save</span>'
+    })
+  }
+  reader.readAsArrayBuffer(file)
 }
 
-async function uploadPhoto(file, uid, sid){
-  const ref=storage.ref(`screenshots/${uid}/${sid}`)
-  const prog=document.getElementById('uprog')
-  const bar=document.getElementById('uprog-bar')
-  prog.style.display='block'
-  return new Promise((res,rej)=>{
-    const task=ref.put(file)
-    task.on('state_changed',
-      s=>{ bar.style.width=Math.round(s.bytesTransferred/s.totalBytes*100)+'%' },
-      e=>{ prog.style.display='none'; rej(e) },
-      async ()=>{ const url=await task.snapshot.ref.getDownloadURL(); prog.style.display='none'; bar.style.width='0'; res({url,path:`screenshots/${uid}/${sid}`}) }
-    )
-  })
+function compressToBase64(file, cb){
+  const img = new Image()
+  img.onload = ()=>{
+    const canvas = document.createElement('canvas')
+    // Max 800px on longest side — enough to read treadmill numbers clearly
+    const MAX = 800
+    let w = img.width, h = img.height
+    if(w > MAX || h > MAX){
+      if(w > h){ h = Math.round(h*MAX/w); w = MAX }
+      else { w = Math.round(w*MAX/h); h = MAX }
+    }
+    canvas.width = w; canvas.height = h
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+    // Quality 0.75 — good balance between clarity and size
+    const b64 = canvas.toDataURL('image/jpeg', 0.75).split(',')[1]
+    const sizeKB = Math.round(b64.length * 0.75 / 1024)
+    cb(b64, sizeKB)
+  }
+  img.src = URL.createObjectURL(file)
 }
+
+
+// Extract EXIF DateTimeOriginal from JPEG binary
+// Returns a Date object or null
+function extractExifDate(arr){
+  // Check JPEG magic bytes
+  if(arr[0] !== 0xFF || arr[1] !== 0xD8) return null
+
+  let i = 2
+  while(i < arr.length - 4){
+    // Find APP1 marker (0xFFE1 = EXIF)
+    if(arr[i] === 0xFF && arr[i+1] === 0xE1){
+      const segLen = (arr[i+2] << 8) | arr[i+3]
+      const segEnd = i + 2 + segLen
+
+      // Check for Exif header
+      if(arr[i+4]===0x45&&arr[i+5]===0x78&&arr[i+6]===0x69&&arr[i+7]===0x66){
+        const tiffStart = i + 10
+        // Determine byte order
+        const littleEndian = arr[tiffStart]===0x49 && arr[tiffStart+1]===0x49
+
+        const readU16 = o => littleEndian ? (arr[tiffStart+o] | arr[tiffStart+o+1]<<8) : (arr[tiffStart+o]<<8 | arr[tiffStart+o+1])
+        const readU32 = o => littleEndian
+          ? (arr[tiffStart+o] | arr[tiffStart+o+1]<<8 | arr[tiffStart+o+2]<<16 | arr[tiffStart+o+3]<<24) >>> 0
+          : (arr[tiffStart+o]<<24 | arr[tiffStart+o+1]<<16 | arr[tiffStart+o+2]<<8 | arr[tiffStart+o+3]) >>> 0
+
+        const ifdOffset = readU32(4)
+        const numEntries = readU16(ifdOffset)
+
+        for(let e=0; e<numEntries; e++){
+          const entryOffset = ifdOffset + 2 + e*12
+          const tag = readU16(entryOffset)
+          // Tag 0x9003 = DateTimeOriginal, 0x9004 = DateTimeDigitized, 0x0132 = DateTime
+          if(tag === 0x9003 || tag === 0x9004 || tag === 0x0132){
+            const valueOffset = readU32(entryOffset + 8)
+            // Read ASCII string: "YYYY:MM:DD HH:MM:SS"
+            let dateStr = ''
+            for(let k=0; k<19; k++){
+              const ch = arr[tiffStart + valueOffset + k]
+              if(ch === 0) break
+              dateStr += String.fromCharCode(ch)
+            }
+            // Parse "YYYY:MM:DD HH:MM:SS"
+            const m = dateStr.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/)
+            if(m){
+              const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6])
+              d._fromExif = true
+              return d
+            }
+          }
+        }
+      }
+      i = segEnd
+    } else if(arr[i] === 0xFF && arr[i+1] !== 0x00){
+      // Skip other markers
+      if(i+3 < arr.length){
+        const len = (arr[i+2] << 8) | arr[i+3]
+        i += 2 + len
+      } else break
+    } else {
+      i++
+    }
+  }
+  return null
+}
+
 
 // ═══════════════════════════════════════
 // SAVE TREADMILL
@@ -700,9 +821,13 @@ async function saveTread(){
   try{
     const sid=db.collection('_').doc().id
     const fd=new Date(document.getElementById('t-date').value+'T'+document.getElementById('t-time').value)
-    const capturedAt=pendingFile?new Date(pendingFile.lastModified):fd
-    let screenshotUrl=null, screenshotPath=null
-    if(pendingFile){ btn.textContent='⏳ Uploading photo...'; const up=await uploadPhoto(pendingFile,user.uid,sid); screenshotUrl=up.url; screenshotPath=up.path }
+    // Use the date/time fields (already set from EXIF or lastModified in onPhoto)
+    const capturedAt = fd
+    // Check compressed image size — Firestore doc limit is 1MB
+    if(pendingB64 && pendingB64.length * 0.75 > 900000){
+      toast('⚠️ Photo too large even after compression — saving without photo')
+      pendingB64 = null
+    }
     await db.doc(`users/${user.uid}/treadmill/${sid}`).set({
       sessionId:sid, userId:user.uid,
       date:document.getElementById('t-date').value,
@@ -713,7 +838,7 @@ async function saveTread(){
       duration_min:parseInt(document.getElementById('t-dur').value)||0,
       avg_speed_kmh:parseFloat(document.getElementById('t-spd').value)||0,
       notes:document.getElementById('t-notes').value||'',
-      screenshotUrl, screenshotPath,
+      screenshotB64: pendingB64 || null,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     })
     toast('✅ Session saved!')
@@ -734,6 +859,7 @@ function resetTread(){
   document.getElementById('pc').value=''
   document.getElementById('pg-file').value=''
   pendingFile=null
+  pendingB64=null
   setNow('t')
 }
 
@@ -886,7 +1012,8 @@ async function loadHist(){
     el.innerHTML=all.map(r=>{
       const dt=fmt(r.date)
       if(r._t==='t'){
-        const thumb=r.screenshotUrl?`<img class="hi-thumb" src="${r.screenshotUrl}" onclick="openPM('${r.screenshotUrl}')" alt="screenshot"/>`:''
+        const imgSrc = r.screenshotB64 ? 'data:image/jpeg;base64,'+r.screenshotB64 : null
+        const thumb = imgSrc ? `<img class="hi-thumb" src="${imgSrc}" onclick="openPM('${imgSrc}')" alt="screenshot"/>` : ''
         return `<div class="hi"><div class="hi-icon hi-t">🏃</div><div class="hi-info"><div class="hi-title">${r.distance_km||0} km · ${r.calories||0} cal</div><div class="hi-sub">${r.duration_min||0} min · ${r.avg_speed_kmh||0} km/h${r.notes?' · '+r.notes:''}</div></div>${thumb}<div class="hi-date">${dt}<br/><span style="color:var(--t3)">${r.time||''}</span></div></div>`
       }
       return `<div class="hi"><div class="hi-icon hi-w">💪</div><div class="hi-info"><div class="hi-title">${(r.muscleGroups||[]).join(' + ')}</div><div class="hi-sub">${r.exercises||''}${r.sets?' · '+r.sets+'×'+r.reps:''}</div></div><div class="hi-date">${dt}<br/><span style="color:var(--t3)">${r.time||''}</span></div></div>`
@@ -935,8 +1062,8 @@ async function exportCSV(type){
     const rows=snap.docs.map(d=>d.data())
     let hdr,data,fname
     if(type==='treadmill'){
-      hdr=['Date','Time','Distance (km)','Calories','Duration (min)','Avg Speed (km/h)','Notes','Screenshot URL']
-      data=rows.map(r=>[r.date,r.time,r.distance_km,r.calories,r.duration_min,r.avg_speed_kmh,r.notes||'',r.screenshotUrl||''])
+      hdr=['Date','Time','Distance (km)','Calories','Duration (min)','Avg Speed (km/h)','Notes','Has Screenshot']
+      data=rows.map(r=>[r.date,r.time,r.distance_km,r.calories,r.duration_min,r.avg_speed_kmh,r.notes||'',r.screenshotB64?'Yes':'No'])
       fname='pulselog_treadmill.csv'
     } else {
       hdr=['Date','Time','Muscle Groups','Exercises','Sets','Reps','Energy','Notes']
