@@ -509,7 +509,6 @@ textarea.form-input{resize:none;min-height:72px}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-window.addEventListener('load', function() {
 // ═══════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════
@@ -530,11 +529,8 @@ const ADMIN_UID = 'SET_YOUR_UID_HERE'
 // ═══════════════════════════════════════════════════
 // INIT FIREBASE
 // ═══════════════════════════════════════════════════
-firebase.initializeApp(FIREBASE_CONFIG)
-const auth    = firebase.auth()
-const db      = firebase.firestore()
-const storage = firebase.storage()
-
+// Firebase initialized in initApp() below
+let auth = null, db = null, storage = null
 let currentUser = null
 let mainChart   = null
 let currentChartView = '7d'
@@ -543,24 +539,7 @@ let _pendingPhotoFile = null
 // ═══════════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════════
-auth.onAuthStateChanged(async user => {
-  document.getElementById('loading-screen').style.display = 'none'
-  if(user){
-    currentUser = user
-    console.log('Your UID:', user.uid) // copy this to set ADMIN_UID
-    await ensureUserProfile(user)
-    setupUserUI(user)
-    showScreen('dashboard')
-    document.getElementById('bottom-nav').style.display = 'flex'
-    if(user.uid === ADMIN_UID){
-      document.getElementById('admin-nav-btn').style.display = 'flex'
-    }
-    updateDashboard()
-  } else {
-    currentUser = null
-    showLoginScreen()
-  }
-})
+// auth listener set up in initApp()
 
 async function ensureUserProfile(user){
   const ref = db.collection('users').doc(user.uid).collection('profile').doc('info')
@@ -1180,10 +1159,52 @@ async function exportCSV(type){
 }
 
 // ═══════════════════════════════════════════════════
-// INIT
+// INIT — safe load with retry if Firebase not ready
 // ═══════════════════════════════════════════════════
-setNow('t'); setNow('w')
-}); // end window.load
+function initApp(){
+  if(typeof firebase === 'undefined'){
+    setTimeout(initApp, 100)
+    return
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG)
+  }catch(e){
+    // already initialized — ignore
+  }
+  const _auth    = firebase.auth()
+  const _db      = firebase.firestore()
+  const _storage = firebase.storage()
+
+  // reassign module-level refs
+  Object.assign(window, {
+    auth:    _auth,
+    db:      _db,
+    storage: _storage
+  })
+
+  _auth.onAuthStateChanged(async user => {
+    document.getElementById('loading-screen').style.display = 'none'
+    if(user){
+      currentUser = user
+      console.log('Your UID:', user.uid)
+      await ensureUserProfile(user)
+      setupUserUI(user)
+      showScreen('dashboard')
+      document.getElementById('bottom-nav').style.display = 'flex'
+      if(user.uid === ADMIN_UID){
+        document.getElementById('admin-nav-btn').style.display = 'flex'
+      }
+      updateDashboard()
+    } else {
+      currentUser = null
+      showLoginScreen()
+    }
+  })
+
+  setNow('t'); setNow('w')
+}
+
+document.addEventListener('DOMContentLoaded', initApp)
 </script>
 </body>
 </html>
