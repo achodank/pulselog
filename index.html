@@ -2,302 +2,289 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<meta name="theme-color" content="#0a0a0a"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta name="theme-color" content="#0f0f0f"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
 <title>PulseLog</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<!-- Firebase SDKs -->
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-app-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-auth-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-firestore-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-storage-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;
-  --border:#333;--border2:#444;
-  --text:#f0f0f0;--text2:#a0a0a0;--text3:#666;
-  --green:#00e5a0;--green2:#00b87d;--green-dim:rgba(0,229,160,0.1);--green-dim2:rgba(0,229,160,0.15);
-  --red:#ff4757;--amber:#ffb830;--blue:#4da6ff;--purple:#b388ff;
-  --radius:14px;--radius-sm:8px;--radius-xs:6px;
+  --b:#333;--b2:#444;
+  --t:#f0f0f0;--t2:#a0a0a0;--t3:#555;
+  --g:#00e5a0;--g2:#00b87d;--gd:rgba(0,229,160,0.12);
+  --red:#ff4757;--amb:#ffb830;--blu:#4da6ff;--pur:#b388ff;
+  --r:14px;--rs:8px;
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--t);font-family:var(--font);font-size:15px;overflow:hidden}
 
-/* ── SCREENS ── */
-.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
-.screen.active{display:flex}
-
-/* ── SCROLLABLE CONTENT ── */
-.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px 16px 100px}
-.scroll-area::-webkit-scrollbar{display:none}
-
-/* ── LOGIN SCREEN ── */
-#screen-login{background:var(--bg);align-items:center;justify-content:center;padding:32px;z-index:500;position:relative}
-.login-glow{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.12) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none}
-.login-logo{font-size:48px;margin-bottom:8px;text-align:center}
-.login-title{font-size:32px;font-weight:600;color:var(--text);letter-spacing:-1px;text-align:center;margin-bottom:4px}
-.login-sub{font-size:14px;color:var(--text2);text-align:center;margin-bottom:48px}
-.login-features{width:100%;max-width:320px;margin-bottom:40px}
-.login-feat{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
-.login-feat:last-child{border-bottom:none}
-.feat-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
-.login-btn{width:100%;max-width:320px;padding:16px;border-radius:var(--radius);border:none;background:var(--green);color:#0a0a0a;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
-.login-btn:hover{background:var(--green2);transform:translateY(-1px)}
-.login-btn:active{transform:scale(0.98)}
-.login-btn svg{width:20px;height:20px}
-.login-error{margin-top:14px;font-size:13px;color:var(--red);text-align:center;min-height:20px}
-
-/* ── TOP BAR ── */
-.topbar{padding:52px 16px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border)}
-.topbar-title{font-size:20px;font-weight:600;letter-spacing:-0.5px}
-.topbar-right{display:flex;align-items:center;gap:10px}
-.avatar{width:34px;height:34px;border-radius:50%;border:2px solid var(--green);object-fit:cover;cursor:pointer}
-.avatar-fallback{width:34px;height:34px;border-radius:50%;border:2px solid var(--green);background:var(--green-dim2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--green)}
-
-/* ── BOTTOM NAV ── */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:50}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;font-family:var(--font);gap:4px;transition:color .2s}
-.nav-btn.active{color:var(--green)}
-.nav-btn svg{width:22px;height:22px;stroke:currentColor}
-
-/* ── CARDS ── */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
-.card-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:10px}
-
-/* ── KPI GRID ── */
-.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 12px}
-.kpi-val{font-size:28px;font-weight:600;letter-spacing:-1px;line-height:1}
-.kpi-label{font-size:11px;color:var(--text2);margin-top:4px}
-.kpi.g .kpi-val{color:var(--green)}
-.kpi.a .kpi-val{color:var(--amber)}
-.kpi.b .kpi-val{color:var(--blue)}
-.kpi.p .kpi-val{color:var(--purple)}
-
-/* ── FORMS ── */
-.form-group{margin-bottom:14px}
-.form-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.05em}
-.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;background:var(--bg3);color:var(--text);font-family:var(--font);outline:none;transition:border-color .2s;-webkit-appearance:none}
-.form-input:focus{border-color:var(--green)}
-.form-input::placeholder{color:var(--text3)}
-select.form-input option{background:var(--bg3)}
-textarea.form-input{resize:none;min-height:72px}
-.speed-display{padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);font-size:15px;display:flex;justify-content:space-between;align-items:center}
-.speed-val{font-weight:500;color:var(--green);font-family:var(--mono)}
-.speed-tag{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
-
-/* ── BUTTONS ── */
-.btn{width:100%;padding:14px;border-radius:var(--radius-sm);border:none;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:0}
-.btn:active{transform:scale(0.98)}
-.btn-primary{background:var(--green);color:#0a0a0a}
-.btn-primary:hover{background:var(--green2)}
-.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
-.btn-danger{background:rgba(255,71,87,0.15);color:var(--red);border:1px solid rgba(255,71,87,0.3)}
-.btn-purple{background:rgba(179,136,255,0.15);color:var(--purple);border:1px solid rgba(179,136,255,0.3)}
-.btn-amber{background:rgba(255,184,48,0.15);color:var(--amber);border:1px solid rgba(255,184,48,0.3)}
-.btn-gap{margin-bottom:10px}
-.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;flex-shrink:0}
-
-/* ── MUSCLE CHIPS ── */
-.chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.chip{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);background:var(--bg3);transition:all .15s;user-select:none}
-.chip input{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
-.chip.on{border-color:var(--green);background:var(--green-dim);color:var(--green)}
-.chip-summary{font-size:12px;color:var(--green);min-height:16px;margin-top:6px;font-weight:500}
-
-/* ── PHOTO UPLOAD ── */
-.photo-zone{border:1.5px dashed var(--border2);border-radius:var(--radius);padding:8px;margin-bottom:12px}
-#photo-preview{width:100%;border-radius:var(--radius-sm);margin-bottom:8px;display:none;max-height:200px;object-fit:cover}
-.photo-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.photo-ts-bar{display:none;background:var(--green-dim);border:1px solid var(--green);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--green);font-weight:500;text-align:center}
-
-/* ── HISTORY ITEMS ── */
-.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
-.hist-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;margin-top:2px}
-.hist-icon.t{background:rgba(77,166,255,0.15)}
-.hist-icon.w{background:rgba(179,136,255,0.15)}
-.hist-info{flex:1;min-width:0}
-.hist-title{font-size:14px;font-weight:600}
-.hist-sub{font-size:12px;color:var(--text2);margin-top:2px}
-.hist-thumb{width:48px;height:48px;border-radius:var(--radius-xs);object-fit:cover;flex-shrink:0;cursor:pointer;border:1px solid var(--border)}
-.hist-date{font-size:11px;color:var(--text3);text-align:right;flex-shrink:0}
-
-/* ── TOAST ── */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);color:var(--text);border:1px solid var(--border2);padding:10px 18px;border-radius:20px;font-size:13px;opacity:0;transition:all .3s;z-index:200;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* ── LOADING ── */
-.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300}
-.loading-logo{font-size:40px;margin-bottom:12px}
-.loading-title{font-size:22px;font-weight:600;color:var(--text);margin-bottom:6px}
-.loading-sub{font-size:13px;color:var(--text2)}
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+#loader h1{font-size:28px;font-weight:600;margin-top:12px;letter-spacing:-0.5px}
+#loader p{font-size:13px;color:var(--t2);margin-top:6px}
+.spin{width:22px;height:22px;border:2.5px solid var(--b2);border-top-color:var(--g);border-radius:50%;animation:spin .7s linear infinite;margin-top:20px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;margin:16px auto 0}
 
-/* ── STREAK ── */
-.streak-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
-.streak-dot{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--text3)}
-.streak-dot.done{background:var(--green);border-color:var(--green);color:#0a0a0a}
-.streak-dot.today{border-color:var(--green);color:var(--green)}
+/* SCREENS */
+.pg{position:fixed;inset:0;display:none;flex-direction:column;overflow:hidden;background:var(--bg)}
+.pg.on{display:flex}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px 16px 96px}
+.body::-webkit-scrollbar{display:none}
 
-/* ── CHART VIEW BTNS ── */
-.chart-tabs{display:flex;gap:6px}
-.ctab{padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;font-weight:500;font-family:var(--font);cursor:pointer;transition:all .15s}
-.ctab.active{background:var(--green);color:#0a0a0a;border-color:var(--green)}
+/* LOGIN */
+#pg-login{align-items:center;justify-content:center;padding:32px;z-index:100}
+.login-icon{font-size:56px;margin-bottom:8px}
+.login-h{font-size:34px;font-weight:700;letter-spacing:-1.5px;margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--t2);margin-bottom:40px;text-align:center}
+.login-feats{width:100%;max-width:300px;margin-bottom:36px}
+.lf{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b)}
+.lf:last-child{border-bottom:none}
+.lfd{width:6px;height:6px;border-radius:50%;background:var(--g);flex-shrink:0}
+.lft{font-size:13px;color:var(--t2)}
+#btn-google{width:100%;max-width:300px;padding:16px;border-radius:var(--rs);border:1.5px solid var(--b2);background:var(--bg2);color:var(--t);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
+#btn-google:hover{border-color:var(--g);background:var(--bg3)}
+#btn-google:active{transform:scale(0.98)}
+#btn-google:disabled{opacity:0.6;cursor:not-allowed}
+#login-err{margin-top:12px;font-size:12px;color:var(--red);text-align:center;min-height:18px;max-width:300px;line-height:1.5}
 
-/* ── TIME SLOTS ── */
-.tslot{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.tslot-lbl{font-size:11px;color:var(--text2);width:72px;text-align:right;flex-shrink:0}
-.tslot-track{flex:1;height:22px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative}
-.tslot-bar{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;transition:width .5s ease}
-.tslot-cnt{font-size:10px;font-weight:600;color:#0a0a0a}
-.tslot-tag{font-size:10px;font-weight:600;width:36px;flex-shrink:0}
+/* TOPBAR */
+.topbar{padding:52px 16px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b);flex-shrink:0}
+.topbar-l{display:flex;flex-direction:column}
+.topbar-tag{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t3)}
+.topbar-h{font-size:20px;font-weight:600;letter-spacing:-0.5px}
+.av{width:34px;height:34px;border-radius:50%;border:2px solid var(--g);object-fit:cover;cursor:pointer}
+.av-fb{width:34px;height:34px;border-radius:50%;border:2px solid var(--g);background:var(--gd);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--g);cursor:pointer}
 
-/* ── VISIT ROWS ── */
-.visit-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
-.visit-row:last-child{border-bottom:none}
-.visit-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+/* NAV */
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--b);display:none;padding-bottom:env(safe-area-inset-bottom);z-index:50}
+.nav.on{display:flex}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;background:none;border:none;cursor:pointer;color:var(--t3);font-size:10px;font-family:var(--font);gap:4px;transition:color .2s}
+.nb.on{color:var(--g)}
+.nb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
 
-/* ── ADMIN ── */
-.admin-user{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
-.admin-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border2)}
-.admin-info{flex:1;min-width:0}
-.admin-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.admin-email{font-size:11px;color:var(--text3)}
-.admin-stats{text-align:right;flex-shrink:0}
-.admin-stat-val{font-size:14px;font-weight:600;color:var(--green)}
-.admin-stat-lbl{font-size:10px;color:var(--text3)}
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.cl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:10px}
 
-/* ── EMPTY ── */
-.empty{text-align:center;padding:40px 16px;color:var(--text3)}
-.empty-icon{font-size:40px;margin-bottom:10px}
+/* KPIS */
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:14px}
+.kv{font-size:28px;font-weight:600;letter-spacing:-1px;line-height:1}
+.kl{font-size:11px;color:var(--t2);margin-top:4px}
+.kg .kv{color:var(--g)}.ka .kv{color:var(--amb)}.kb .kv{color:var(--blu)}.kp .kv{color:var(--pur)}
+
+/* FORMS */
+.fg{margin-bottom:14px}
+.fl{font-size:11px;font-weight:500;color:var(--t2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.06em}
+.fi{width:100%;padding:12px 14px;border:1px solid var(--b);border-radius:var(--rs);font-size:15px;background:var(--bg3);color:var(--t);font-family:var(--font);outline:none;transition:border .2s;-webkit-appearance:none;appearance:none}
+.fi:focus{border-color:var(--g)}
+.fi::placeholder{color:var(--t3)}
+select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23555' d='M5 7L0 2h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+textarea.fi{resize:none;min-height:72px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spd-row{padding:12px 14px;border:1px solid var(--b);border-radius:var(--rs);background:var(--bg3);display:flex;justify-content:space-between;align-items:center}
+.spd-v{font-weight:500;font-family:var(--mono);color:var(--g)}
+.spd-tag{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+
+/* BUTTONS */
+.btn{width:100%;padding:14px;border-radius:var(--rs);border:none;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn:active{transform:scale(0.98)}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.bg{background:var(--g);color:#0a0a0a}.bg:hover{background:var(--g2)}
+.bs{background:var(--bg3);color:var(--t);border:1px solid var(--b)}
+.bd{background:rgba(255,71,87,.15);color:var(--red);border:1px solid rgba(255,71,87,.3)}
+.bp{background:rgba(179,136,255,.15);color:var(--pur);border:1px solid rgba(179,136,255,.3)}
+.ba{background:rgba(255,184,48,.15);color:var(--amb);border:1px solid rgba(255,184,48,.3)}
+.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;flex-shrink:0}
+.gap{margin-bottom:10px}
+
+/* CHIPS */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--b);border-radius:var(--rs);cursor:pointer;font-size:13px;color:var(--t2);background:var(--bg3);user-select:none;transition:all .15s}
+.chip input{width:15px;height:15px;accent-color:var(--g);flex-shrink:0;cursor:pointer}
+.chip.on{border-color:var(--g);background:var(--gd);color:var(--g)}
+.csumm{font-size:12px;color:var(--g);min-height:16px;margin-top:6px;font-weight:500}
+
+/* PHOTO */
+.pzone{border:1.5px dashed var(--b2);border-radius:var(--r);padding:8px;margin-bottom:12px}
+#photo-prev{width:100%;border-radius:var(--rs);margin-bottom:8px;display:none;max-height:200px;object-fit:cover}
+.pbrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+#pts-bar{display:none;background:var(--gd);border:1px solid var(--g);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--g);font-weight:500;text-align:center}
+.uprog{height:3px;background:var(--b);border-radius:2px;overflow:hidden;margin-top:8px;display:none}
+.uprog-bar{height:100%;background:var(--g);border-radius:2px;transition:width .3s;width:0}
+
+/* HISTORY */
+.hi{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+.hi-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.hi-t{background:rgba(77,166,255,.15)}
+.hi-w{background:rgba(179,136,255,.15)}
+.hi-info{flex:1;min-width:0}
+.hi-title{font-size:14px;font-weight:600}
+.hi-sub{font-size:12px;color:var(--t2);margin-top:2px}
+.hi-thumb{width:46px;height:46px;border-radius:6px;object-fit:cover;flex-shrink:0;cursor:pointer;border:1px solid var(--b)}
+.hi-date{font-size:11px;color:var(--t3);text-align:right;flex-shrink:0}
+
+/* STREAK */
+.srow{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.sd{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--t3)}
+.sd.done{background:var(--g);border-color:var(--g);color:#0a0a0a}
+.sd.today{border-color:var(--g);color:var(--g)}
+
+/* CHART TABS */
+.ctabs{display:flex;gap:6px}
+.ct{padding:4px 12px;border-radius:20px;border:1px solid var(--b);background:transparent;color:var(--t3);font-size:11px;font-weight:500;font-family:var(--font);cursor:pointer;transition:all .15s}
+.ct.on{background:var(--g);color:#0a0a0a;border-color:var(--g)}
+
+/* GYM TIME */
+.tsl{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tsl-l{font-size:11px;color:var(--t2);width:72px;text-align:right;flex-shrink:0}
+.tsl-tr{flex:1;height:22px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative}
+.tsl-b{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;transition:width .5s}
+.tsl-c{font-size:10px;font-weight:600;color:#0a0a0a}
+.tsl-tag{font-size:10px;width:32px;flex-shrink:0}
+.vrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--b);font-size:13px}
+.vrow:last-child{border-bottom:none}
+.vdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ADMIN */
+.au{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.au-av{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid var(--b2);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--t2)}
+.au-info{flex:1;min-width:0}
+.au-name{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.au-email{font-size:11px;color:var(--t3)}
+.au-stats{text-align:right;flex-shrink:0}
+.au-sv{font-size:15px;font-weight:600;color:var(--g)}
+.au-sl{font-size:10px;color:var(--t3)}
+
+/* DRAWER (profile) */
+#drawer{position:fixed;top:0;right:0;bottom:0;width:270px;background:var(--bg2);border-left:1px solid var(--b);z-index:200;transform:translateX(100%);transition:transform .28s ease;padding:56px 20px 24px;display:flex;flex-direction:column;gap:10px}
+#drawer.on{transform:translateX(0)}
+#drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;display:none}
+#drawer-overlay.on{display:block}
+.dr-name{font-size:18px;font-weight:600}
+.dr-email{font-size:12px;color:var(--t2);margin-bottom:16px}
+
+/* TOAST */
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg3);color:var(--t);border:1px solid var(--b2);padding:9px 18px;border-radius:20px;font-size:13px;opacity:0;transition:all .25s;z-index:500;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* PHOTO MODAL */
+#pmodal{position:fixed;inset:0;background:rgba(0,0,0,.93);display:none;align-items:center;justify-content:center;z-index:600;padding:20px}
+#pmodal.on{display:flex}
+#pmodal img{max-width:100%;max-height:88vh;border-radius:var(--r);object-fit:contain}
+#pmodal-close{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;background:var(--bg3);border:1px solid var(--b);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 16px;color:var(--t3)}
+.empty-i{font-size:42px;margin-bottom:10px}
 .empty p{font-size:14px}
 
-/* ── PHOTO MODAL ── */
-.photo-modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
-.photo-modal.open{display:flex}
-.photo-modal img{max-width:100%;max-height:90vh;border-radius:var(--radius);object-fit:contain}
-.photo-modal-close{position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text)}
-
-/* ── PROFILE MENU ── */
-.profile-menu{position:fixed;top:0;right:0;bottom:0;width:280px;background:var(--bg2);border-left:1px solid var(--border);z-index:100;transform:translateX(100%);transition:transform .3s;padding:60px 20px 20px;display:flex;flex-direction:column;gap:12px}
-.profile-menu.open{transform:translateX(0)}
-.profile-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;display:none}
-.profile-menu-overlay.open{display:block}
-.profile-name{font-size:18px;font-weight:600;margin-bottom:2px}
-.profile-email{font-size:13px;color:var(--text2);margin-bottom:20px}
-
-/* ── PROGRESS BAR ── */
-.upload-progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px;display:none}
-.upload-progress-bar{height:100%;background:var(--green);border-radius:2px;transition:width .3s;width:0%}
-
 @media(min-width:480px){
-  .screen{max-width:480px;margin:0 auto;left:50%;transform:translateX(-50%)}
-  .bottom-nav{max-width:480px;left:50%;transform:translateX(-50%)}
-  .profile-menu{right:calc(50% - 240px)}
-  .profile-menu-overlay{display:block!important;opacity:0}
+  .pg,.nav{max-width:480px;left:50%;right:auto;transform:translateX(-50%)}
+  .pg.on{display:flex}
+  #drawer{right:calc(50% - 240px)}
 }
 </style>
 </head>
 <body>
 
-<!-- Loading -->
-<div class="loading-screen" id="loading-screen">
-  <div class="loading-logo">⚡</div>
-  <div class="loading-title">PulseLog</div>
-  <div class="loading-sub">Your personal fitness tracker</div>
-  <div class="spinner"></div>
+<!-- LOADER -->
+<div id="loader">
+  <div style="font-size:52px">⚡</div>
+  <h1>PulseLog</h1>
+  <p>Loading your fitness tracker...</p>
+  <div class="spin"></div>
 </div>
 
-<!-- Toast -->
+<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- Photo Modal -->
-<div class="photo-modal" id="photo-modal" onclick="closePhotoModal()">
-  <div class="photo-modal-close" onclick="closePhotoModal()">✕</div>
-  <img id="modal-img" src="" alt="Screenshot"/>
+<!-- PHOTO MODAL -->
+<div id="pmodal" onclick="closePM()">
+  <div id="pmodal-close" onclick="closePM()">✕</div>
+  <img id="pmodal-img" src="" alt=""/>
 </div>
 
-<!-- Profile Menu Overlay -->
-<div class="profile-menu-overlay" id="pm-overlay" onclick="closeProfile()" style="display:none"></div>
+<!-- DRAWER OVERLAY -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
 
-<!-- Profile Menu -->
-<div class="profile-menu" id="profile-menu" style="display:none">
-  <div>
-    <div class="profile-name" id="pm-name"></div>
-    <div class="profile-email" id="pm-email"></div>
-  </div>
-  <button class="btn btn-secondary btn-gap" onclick="exportCSV('treadmill')">📥 Export Treadmill CSV</button>
-  <button class="btn btn-secondary btn-gap" onclick="exportCSV('workout')">📥 Export Workout CSV</button>
+<!-- DRAWER (profile — only shown when logged in) -->
+<div id="drawer">
+  <div class="dr-name" id="dr-name"></div>
+  <div class="dr-email" id="dr-email"></div>
+  <button class="btn bs gap" onclick="exportCSV('treadmill')">📥 Export Treadmill CSV</button>
+  <button class="btn bs gap" onclick="exportCSV('workout')">📥 Export Workout CSV</button>
   <div style="flex:1"></div>
-  <button class="btn btn-danger" onclick="signOutUser()">Sign Out</button>
+  <button class="btn bd" onclick="doSignOut()">Sign Out</button>
 </div>
 
-<!-- ═══════════ LOGIN ═══════════ -->
-<div class="screen active" id="screen-login">
-  <div class="login-glow"></div>
-  <div style="font-size:52px;text-align:center;margin-bottom:6px">⚡</div>
-  <div class="login-title">PulseLog</div>
+<!-- ═══ LOGIN ═══ -->
+<div class="pg on" id="pg-login">
+  <div class="login-icon">⚡</div>
+  <div class="login-h">PulseLog</div>
   <div class="login-sub">Your personal fitness companion</div>
-  <div class="login-features">
-    <div class="login-feat"><div class="feat-dot"></div><span style="font-size:13px;color:var(--text2)">Track treadmill sessions with screenshot upload</span></div>
-    <div class="login-feat"><div class="feat-dot"></div><span style="font-size:13px;color:var(--text2)">Log gym workouts by muscle group</span></div>
-    <div class="login-feat"><div class="feat-dot"></div><span style="font-size:13px;color:var(--text2)">Dashboard with charts and streaks</span></div>
-    <div class="login-feat"><div class="feat-dot"></div><span style="font-size:13px;color:var(--text2)">Your data — private and secure</span></div>
+  <div class="login-feats">
+    <div class="lf"><div class="lfd"></div><div class="lft">Track treadmill sessions with screenshots</div></div>
+    <div class="lf"><div class="lfd"></div><div class="lft">Log workouts by muscle group</div></div>
+    <div class="lf"><div class="lfd"></div><div class="lft">Dashboard with charts and streaks</div></div>
+    <div class="lf"><div class="lfd"></div><div class="lft">Private — only you see your data</div></div>
   </div>
-  <button class="login-btn" id="google-signin-btn" onclick="signInWithGoogle()">
+  <button id="btn-google" onclick="doSignIn()">
     <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
     Continue with Google
   </button>
-  <div class="login-error" id="login-error"></div>
+  <div id="login-err"></div>
 </div>
 
-<!-- ═══════════ DASHBOARD ═══════════ -->
-<div class="screen" id="screen-dashboard">
+<!-- ═══ DASHBOARD ═══ -->
+<div class="pg" id="pg-dash">
   <div class="topbar">
-    <div>
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em">PulseLog</div>
-      <div class="topbar-title" id="dash-greeting">Good morning</div>
+    <div class="topbar-l">
+      <div class="topbar-tag">PulseLog</div>
+      <div class="topbar-h" id="greeting">Dashboard</div>
     </div>
-    <div class="topbar-right">
-      <div id="user-avatar-wrap"></div>
-    </div>
+    <div id="av-wrap"></div>
   </div>
-  <div class="scroll-area">
-    <div class="kpi-grid">
-      <div class="kpi g"><div class="kpi-val" id="kpi-km">—</div><div class="kpi-label">Total km</div></div>
-      <div class="kpi a"><div class="kpi-val" id="kpi-cal">—</div><div class="kpi-label">Calories</div></div>
-      <div class="kpi b"><div class="kpi-val" id="kpi-min">—</div><div class="kpi-label">Minutes</div></div>
-      <div class="kpi p"><div class="kpi-val" id="kpi-sessions">—</div><div class="kpi-label">Sessions</div></div>
+  <div class="body">
+    <div class="kgrid">
+      <div class="kpi kg"><div class="kv" id="kpi-km">—</div><div class="kl">Total km</div></div>
+      <div class="kpi ka"><div class="kv" id="kpi-cal">—</div><div class="kl">Calories</div></div>
+      <div class="kpi kb"><div class="kv" id="kpi-min">—</div><div class="kl">Minutes</div></div>
+      <div class="kpi kp"><div class="kv" id="kpi-sess">—</div><div class="kl">Sessions</div></div>
     </div>
-
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="card-label" style="margin-bottom:0">Distance (km)</div>
-        <div class="chart-tabs">
-          <button class="ctab active" id="ct-7d" onclick="setChartView('7d')">7D</button>
-          <button class="ctab" id="ct-30d" onclick="setChartView('30d')">30D</button>
-          <button class="ctab" id="ct-mo" onclick="setChartView('monthly')">Monthly</button>
+        <div class="cl" style="margin:0">Distance (km)</div>
+        <div class="ctabs">
+          <button class="ct on" id="ct-7d" onclick="setView('7d')">7D</button>
+          <button class="ct" id="ct-30d" onclick="setView('30d')">30D</button>
+          <button class="ct" id="ct-mo" onclick="setView('mo')">Monthly</button>
         </div>
       </div>
-      <div id="chart-range" style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:8px"></div>
-      <canvas id="chart-main" height="160"></canvas>
+      <div id="chart-lbl" style="font-size:11px;color:var(--t3);text-align:center;margin-bottom:8px"></div>
+      <canvas id="chart" height="160"></canvas>
     </div>
-
     <div class="card">
-      <div class="card-label">7-Day Streak</div>
-      <div class="streak-row" id="streak-row"></div>
+      <div class="cl">7-Day Streak</div>
+      <div class="srow" id="streak"></div>
     </div>
-
     <div class="card">
-      <div class="card-label">Gym Visit Times</div>
-      <div id="gym-time-vis"></div>
+      <div class="cl">Gym Visit Times</div>
+      <div id="gymtime"></div>
     </div>
-
     <div class="card">
-      <div class="card-label">Daily Motivation</div>
-      <div id="motivation-box" style="font-size:14px;color:var(--text2);font-style:italic;line-height:1.7;margin-bottom:12px;min-height:48px">Tap below for your daily push! 🔥</div>
-      <button class="btn btn-amber" onclick="getMotivation()">
+      <div class="cl">Daily Motivation</div>
+      <div id="motiv-txt" style="font-size:14px;color:var(--t2);font-style:italic;line-height:1.7;margin-bottom:12px;min-height:44px">Tap below for your daily push! 🔥</div>
+      <button class="btn ba" onclick="getMotiv()">
         <svg viewBox="0 0 24 24" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         Motivate Me
       </button>
@@ -305,76 +292,54 @@ textarea.form-input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- ═══════════ TREADMILL ═══════════ -->
-<div class="screen" id="screen-treadmill">
-  <div class="topbar">
-    <div class="topbar-title">🏃 Treadmill</div>
-  </div>
-  <div class="scroll-area">
+<!-- ═══ TREADMILL ═══ -->
+<div class="pg" id="pg-tread">
+  <div class="topbar"><div class="topbar-h">🏃 Treadmill</div></div>
+  <div class="body">
     <div class="card">
-      <div class="card-label">Screenshot Upload</div>
-      <input type="file" id="photo-camera" accept="image/*" capture="environment" onchange="handlePhoto(event)" style="display:none"/>
-      <input type="file" id="photo-gallery" accept="image/*" onchange="handlePhoto(event)" style="display:none"/>
-      <div class="photo-zone">
-        <img id="photo-preview" alt="preview"/>
-        <div class="photo-btn-row">
-          <button class="btn btn-secondary" onclick="document.getElementById('photo-camera').click()" style="flex-direction:column;gap:4px;padding:14px 8px">
-            <svg viewBox="0 0 24 24" stroke-width="1.5" width="24" height="24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <div class="cl">Screenshot</div>
+      <input type="file" id="pc" accept="image/*" capture="environment" onchange="onPhoto(event)" style="display:none"/>
+      <input type="file" id="pg-file" accept="image/*" onchange="onPhoto(event)" style="display:none"/>
+      <div class="pzone">
+        <img id="photo-prev" alt="preview"/>
+        <div class="pbrow">
+          <button class="btn bs" onclick="document.getElementById('pc').click()" style="flex-direction:column;gap:4px;padding:14px 8px">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" width="24" height="24" fill="none" stroke="currentColor"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
             <span style="font-size:12px">Camera</span>
           </button>
-          <button class="btn btn-secondary" onclick="document.getElementById('photo-gallery').click()" style="flex-direction:column;gap:4px;padding:14px 8px;border-style:dashed">
-            <svg viewBox="0 0 24 24" stroke-width="1.5" width="24" height="24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <button class="btn bs" onclick="document.getElementById('pg-file').click()" style="flex-direction:column;gap:4px;padding:14px 8px;border-style:dashed">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" width="24" height="24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <span style="font-size:12px">Gallery</span>
           </button>
         </div>
-        <div class="upload-progress" id="upload-progress">
-          <div class="upload-progress-bar" id="upload-bar"></div>
-        </div>
-        <div class="photo-ts-bar" id="photo-ts-bar"></div>
+        <div class="uprog" id="uprog"><div class="uprog-bar" id="uprog-bar"></div></div>
+        <div id="pts-bar"></div>
       </div>
     </div>
-
     <div class="card">
-      <div class="card-label">Session Details</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Date</label>
-          <input class="form-input" type="date" id="t-date"/>
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Time</label>
-          <input class="form-input" type="time" id="t-time"/>
-        </div>
+      <div class="cl">Session Details</div>
+      <div class="g2" style="margin-bottom:14px">
+        <div><label class="fl">Date</label><input class="fi" type="date" id="t-date"/></div>
+        <div><label class="fl">Time</label><input class="fi" type="time" id="t-time"/></div>
       </div>
-      <div style="height:12px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Distance (km)</label>
-          <input class="form-input" type="number" step="0.01" id="t-km" placeholder="3.5" oninput="calcSpeed()"/>
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Calories</label>
-          <input class="form-input" type="number" id="t-cal" placeholder="280"/>
-        </div>
+      <div class="g2" style="margin-bottom:14px">
+        <div><label class="fl">Distance (km)</label><input class="fi" type="number" step="0.01" id="t-km" placeholder="3.5" oninput="calcSpd()"/></div>
+        <div><label class="fl">Calories</label><input class="fi" type="number" id="t-cal" placeholder="280"/></div>
       </div>
-      <div style="height:12px"></div>
-      <div class="form-group">
-        <label class="form-label">Duration (minutes)</label>
-        <input class="form-input" type="number" id="t-dur" placeholder="30" oninput="calcSpeed()"/>
+      <div class="fg">
+        <label class="fl">Duration (min)</label>
+        <input class="fi" type="number" id="t-dur" placeholder="30" oninput="calcSpd()"/>
       </div>
-      <div class="form-group">
-        <label class="form-label">Avg Speed</label>
-        <div class="speed-display">
-          <span class="speed-val" id="spd-val">— km/h</span>
-          <span class="speed-tag">Auto-calculated</span>
-        </div>
+      <div class="fg">
+        <label class="fl">Avg Speed</label>
+        <div class="spd-row"><span class="spd-v" id="spd-v">— km/h</span><span class="spd-tag">Auto-calc</span></div>
         <input type="hidden" id="t-spd"/>
       </div>
-      <div class="form-group" style="margin-bottom:16px">
-        <label class="form-label">Notes</label>
-        <textarea class="form-input" id="t-notes" placeholder="How did it feel?"></textarea>
+      <div class="fg" style="margin-bottom:16px">
+        <label class="fl">Notes</label>
+        <textarea class="fi" id="t-notes" placeholder="How did it feel?"></textarea>
       </div>
-      <button class="btn btn-primary" id="t-save-btn" onclick="saveTreadmill()">
+      <button class="btn bg" id="t-btn" onclick="saveTread()">
         <svg viewBox="0 0 24 24" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
         Save Session
       </button>
@@ -382,60 +347,40 @@ textarea.form-input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- ═══════════ WORKOUT ═══════════ -->
-<div class="screen" id="screen-workout">
-  <div class="topbar">
-    <div class="topbar-title">💪 Workout</div>
-  </div>
-  <div class="scroll-area">
+<!-- ═══ WORKOUT ═══ -->
+<div class="pg" id="pg-work">
+  <div class="topbar"><div class="topbar-h">💪 Workout</div></div>
+  <div class="body">
     <div class="card">
-      <div class="card-label">Session Info</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div>
-          <label class="form-label">Date</label>
-          <input class="form-input" type="date" id="w-date"/>
-        </div>
-        <div>
-          <label class="form-label">Time</label>
-          <input class="form-input" type="time" id="w-time"/>
-        </div>
+      <div class="g2" style="margin-bottom:14px">
+        <div><label class="fl">Date</label><input class="fi" type="date" id="w-date"/></div>
+        <div><label class="fl">Time</label><input class="fi" type="time" id="w-time"/></div>
       </div>
-
-      <div class="form-group">
-        <label class="form-label">Muscle Groups <span style="color:var(--text3);text-transform:none;letter-spacing:0;font-size:10px">(select all trained)</span></label>
-        <div class="chip-grid">
-          <label class="chip"><input type="checkbox" value="Chest" onchange="toggleChip(this)"/> Chest</label>
-          <label class="chip"><input type="checkbox" value="Back" onchange="toggleChip(this)"/> Back</label>
-          <label class="chip"><input type="checkbox" value="Legs" onchange="toggleChip(this)"/> Legs</label>
-          <label class="chip"><input type="checkbox" value="Shoulders" onchange="toggleChip(this)"/> Shoulders</label>
-          <label class="chip"><input type="checkbox" value="Biceps" onchange="toggleChip(this)"/> Biceps</label>
-          <label class="chip"><input type="checkbox" value="Triceps" onchange="toggleChip(this)"/> Triceps</label>
-          <label class="chip"><input type="checkbox" value="Core / Abs" onchange="toggleChip(this)"/> Core / Abs</label>
-          <label class="chip"><input type="checkbox" value="Forearms" onchange="toggleChip(this)"/> Forearms</label>
-          <label class="chip"><input type="checkbox" value="Glutes" onchange="toggleChip(this)"/> Glutes</label>
-          <label class="chip"><input type="checkbox" value="Cardio" onchange="toggleChip(this)"/> Cardio</label>
-          <label class="chip" style="grid-column:1/-1"><input type="checkbox" value="Full Body" onchange="toggleChip(this)"/> Full Body</label>
+      <div class="fg">
+        <label class="fl">Muscle Groups <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--t3)">(select all trained)</span></label>
+        <div class="cgrid">
+          <label class="chip"><input type="checkbox" value="Chest" onchange="onChip(this)"/> Chest</label>
+          <label class="chip"><input type="checkbox" value="Back" onchange="onChip(this)"/> Back</label>
+          <label class="chip"><input type="checkbox" value="Legs" onchange="onChip(this)"/> Legs</label>
+          <label class="chip"><input type="checkbox" value="Shoulders" onchange="onChip(this)"/> Shoulders</label>
+          <label class="chip"><input type="checkbox" value="Biceps" onchange="onChip(this)"/> Biceps</label>
+          <label class="chip"><input type="checkbox" value="Triceps" onchange="onChip(this)"/> Triceps</label>
+          <label class="chip"><input type="checkbox" value="Core / Abs" onchange="onChip(this)"/> Core / Abs</label>
+          <label class="chip"><input type="checkbox" value="Forearms" onchange="onChip(this)"/> Forearms</label>
+          <label class="chip"><input type="checkbox" value="Glutes" onchange="onChip(this)"/> Glutes</label>
+          <label class="chip"><input type="checkbox" value="Cardio" onchange="onChip(this)"/> Cardio</label>
+          <label class="chip" style="grid-column:1/-1"><input type="checkbox" value="Full Body" onchange="onChip(this)"/> Full Body</label>
         </div>
-        <div class="chip-summary" id="chip-summary"></div>
+        <div class="csumm" id="csumm"></div>
       </div>
-
-      <div class="form-group">
-        <label class="form-label">Exercises</label>
-        <textarea class="form-input" id="w-exercises" placeholder="Bench press, Incline dumbbell..."></textarea>
+      <div class="fg"><label class="fl">Exercises</label><textarea class="fi" id="w-ex" placeholder="Bench press, Cable fly..."></textarea></div>
+      <div class="g2" style="margin-bottom:14px">
+        <div><label class="fl">Sets</label><input class="fi" type="number" id="w-sets" placeholder="4"/></div>
+        <div><label class="fl">Reps</label><input class="fi" type="number" id="w-reps" placeholder="12"/></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div>
-          <label class="form-label">Sets</label>
-          <input class="form-input" type="number" id="w-sets" placeholder="4"/>
-        </div>
-        <div>
-          <label class="form-label">Reps</label>
-          <input class="form-input" type="number" id="w-reps" placeholder="12"/>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Energy Level</label>
-        <select class="form-input" id="w-energy">
+      <div class="fg">
+        <label class="fl">Energy Level</label>
+        <select class="fi" id="w-energy">
           <option value="">How did you feel?</option>
           <option value="5">⭐⭐⭐⭐⭐ Beast mode!</option>
           <option value="4">⭐⭐⭐⭐ Great</option>
@@ -444,11 +389,8 @@ textarea.form-input{resize:none;min-height:72px}
           <option value="1">⭐ Struggled</option>
         </select>
       </div>
-      <div class="form-group" style="margin-bottom:16px">
-        <label class="form-label">Notes</label>
-        <textarea class="form-input" id="w-notes" placeholder="PRs, improvements..."></textarea>
-      </div>
-      <button class="btn btn-purple" id="w-save-btn" onclick="saveWorkout()">
+      <div class="fg" style="margin-bottom:16px"><label class="fl">Notes</label><textarea class="fi" id="w-notes" placeholder="PRs, improvements..."></textarea></div>
+      <button class="btn bp" id="w-btn" onclick="saveWork()">
         <svg viewBox="0 0 24 24" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
         Save Workout
       </button>
@@ -456,807 +398,536 @@ textarea.form-input{resize:none;min-height:72px}
   </div>
 </div>
 
-<!-- ═══════════ HISTORY ═══════════ -->
-<div class="screen" id="screen-history">
-  <div class="topbar">
-    <div class="topbar-title">📋 History</div>
-  </div>
-  <div class="scroll-area" id="history-list">
-    <div class="empty"><div class="empty-icon">📋</div><p>No sessions yet</p></div>
+<!-- ═══ HISTORY ═══ -->
+<div class="pg" id="pg-hist">
+  <div class="topbar"><div class="topbar-h">📋 History</div></div>
+  <div class="body" id="hist-body">
+    <div class="empty"><div class="empty-i">📋</div><p>No sessions yet</p></div>
   </div>
 </div>
 
-<!-- ═══════════ ADMIN ═══════════ -->
-<div class="screen" id="screen-admin">
+<!-- ═══ ADMIN ═══ -->
+<div class="pg" id="pg-admin">
   <div class="topbar">
-    <div class="topbar-title">🛡 Admin</div>
-    <button class="btn btn-secondary" style="width:auto;padding:6px 12px;font-size:12px" onclick="loadAdminData()">Refresh</button>
+    <div class="topbar-h">🛡 Admin</div>
+    <button class="btn bs" style="width:auto;padding:6px 14px;font-size:12px" onclick="loadAdmin()">Refresh</button>
   </div>
-  <div class="scroll-area">
-    <div class="kpi-grid" style="margin-bottom:12px">
-      <div class="kpi g"><div class="kpi-val" id="admin-users">—</div><div class="kpi-label">Total Users</div></div>
-      <div class="kpi b"><div class="kpi-val" id="admin-sessions">—</div><div class="kpi-label">Total Sessions</div></div>
+  <div class="body">
+    <div class="kgrid">
+      <div class="kpi kg"><div class="kv" id="adm-u">—</div><div class="kl">Users</div></div>
+      <div class="kpi kb"><div class="kv" id="adm-s">—</div><div class="kl">Total Sessions</div></div>
     </div>
-    <div class="card-label" style="margin-bottom:8px;padding:0 2px">All Users</div>
-    <div id="admin-user-list"><div class="empty"><div class="empty-icon">👥</div><p>Loading users...</p></div></div>
+    <div class="cl" style="padding:0 2px;margin-bottom:8px">All Users</div>
+    <div id="adm-list"><div class="empty"><div class="empty-i">👥</div><p>Loading...</p></div></div>
   </div>
 </div>
 
-<!-- ═══════════ BOTTOM NAV ═══════════ -->
-<nav class="bottom-nav" id="bottom-nav" style="display:none">
-  <button class="nav-btn active" onclick="showScreen('dashboard',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+<!-- BOTTOM NAV -->
+<nav class="nav" id="nav">
+  <button class="nb on" id="nb-dash" onclick="go('dash',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
   </button>
-  <button class="nav-btn" onclick="showScreen('treadmill',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="5" r="2"/><path d="M12 7v5l3 3M5 12h4M15 12h4"/><path d="M8 19l2-4 2 2 2-4 2 4"/></svg>Treadmill
+  <button class="nb" id="nb-tread" onclick="go('tread',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v5l3 3M5 12h4M15 12h4"/><path d="M8 19l2-4 2 2 2-4 2 4"/></svg>Treadmill
   </button>
-  <button class="nav-btn" onclick="showScreen('workout',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 4v16M18 4v16M6 12h12M3 6h3M18 6h3M3 18h3M18 18h3"/></svg>Workout
+  <button class="nb" id="nb-work" onclick="go('work',this)">
+    <svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M6 12h12M3 6h3M18 6h3M3 18h3M18 18h3"/></svg>Workout
   </button>
-  <button class="nav-btn" onclick="showScreen('history',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
+  <button class="nb" id="nb-hist" onclick="go('hist',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
   </button>
-  <button class="nav-btn" id="admin-nav-btn" style="display:none" onclick="showScreen('admin',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin
+  <button class="nb" id="nb-admin" style="display:none" onclick="go('admin',this)">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin
   </button>
 </nav>
 
-<!-- Firebase SDKs -->
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-app-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-auth-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-firestore-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.7.1/firebase-storage-compat.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
 <script>
-// ═══════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC5O-P63LYLiB5HY91uIPjMcE5G-IeCBew",
-  authDomain: "fitness-tracker-app-dc977.firebaseapp.com",
-  projectId: "fitness-tracker-app-dc977",
-  storageBucket: "fitness-tracker-app-dc977.firebasestorage.app",
-  messagingSenderId: "225708893011",
-  appId: "1:225708893011:web:081bd79a3fb58e5b50f7a6",
-  measurementId: "G-D0HZ68DKLL"
+// ═══════════════════════════════════════
+// CONFIG — hardcoded Firebase
+// ═══════════════════════════════════════
+const ADMIN_UID = 'SET_YOUR_UID_HERE' // replace after first login
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let user = null
+let fbApp, auth, db, storage
+let mc = null // chart instance
+let cv = '7d' // chart view
+let pendingFile = null
+
+// ═══════════════════════════════════════
+// FIREBASE INIT — waits for SDKs to load
+// ═══════════════════════════════════════
+function waitForFirebase(cb, tries){
+  tries = tries || 0
+  if(tries > 50){ console.error('Firebase SDKs failed to load'); return }
+  if(typeof firebase !== 'undefined' && firebase.auth && firebase.firestore){
+    cb()
+  } else {
+    setTimeout(()=>waitForFirebase(cb, tries+1), 100)
+  }
 }
 
-// Your Google UID — will be set after first login (shown in console)
-// Set this after you first log in to unlock admin panel
-const ADMIN_UID = 'SET_YOUR_UID_HERE'
+function boot(){
+  try{
+    fbApp = firebase.initializeApp({
+      apiKey: "AIzaSyC5O-P63LYLiB5HY91uIPjMcE5G-IeCBew",
+      authDomain: "fitness-tracker-app-dc977.firebaseapp.com",
+      projectId: "fitness-tracker-app-dc977",
+      storageBucket: "fitness-tracker-app-dc977.firebasestorage.app",
+      messagingSenderId: "225708893011",
+      appId: "1:225708893011:web:081bd79a3fb58e5b50f7a6"
+    })
+  }catch(e){ /* already initialized */ }
 
-// ═══════════════════════════════════════════════════
-// INIT FIREBASE
-// ═══════════════════════════════════════════════════
-// Firebase initialized in initApp() below
-let auth = null, db = null, storage = null
-let currentUser = null
-let mainChart   = null
-let currentChartView = '7d'
-let _pendingPhotoFile = null
+  auth    = firebase.auth()
+  db      = firebase.firestore()
+  storage = firebase.storage()
 
-// ═══════════════════════════════════════════════════
+  // handle redirect result (comes back after Google login)
+  auth.getRedirectResult().then(r=>{
+    if(r && r.user) console.log('Signed in via redirect:', r.user.email)
+  }).catch(e=>{
+    if(e.code !== 'auth/no-current-user'){
+      document.getElementById('login-err').textContent = e.message
+    }
+  })
+
+  // listen for auth state changes
+  auth.onAuthStateChanged(async u=>{
+    document.getElementById('loader').style.display = 'none'
+    if(u){
+      user = u
+      console.log('✅ Your UID (copy this for ADMIN_UID):', u.uid)
+      await saveProfile(u)
+      setupUI(u)
+      go('dash')
+      document.getElementById('nav').classList.add('on')
+      if(u.uid === ADMIN_UID) document.getElementById('nb-admin').style.display = 'flex'
+      loadDash()
+    } else {
+      user = null
+      // show login, hide everything else
+      document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'))
+      document.getElementById('pg-login').classList.add('on')
+      document.getElementById('nav').classList.remove('on')
+      document.getElementById('drawer').classList.remove('on')
+      document.getElementById('drawer-overlay').classList.remove('on')
+    }
+  })
+}
+
+document.addEventListener('DOMContentLoaded', ()=>waitForFirebase(boot))
+
+// ═══════════════════════════════════════
 // AUTH
-// ═══════════════════════════════════════════════════
-// auth listener set up in initApp()
-
-async function ensureUserProfile(user){
-  const ref = db.collection('users').doc(user.uid).collection('profile').doc('info')
-  const snap = await ref.get()
-  if(!snap.exists){
-    await ref.set({
-      uid: user.uid,
-      displayName: user.displayName || '',
-      email: user.email || '',
-      photoURL: user.photoURL || '',
-      joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      lastActiveAt: firebase.firestore.FieldValue.serverTimestamp(),
-      isAdmin: user.uid === ADMIN_UID
-    })
-    // add to admin summary
-    await db.collection('admin').doc('users').collection('list').doc(user.uid).set({
-      uid: user.uid,
-      displayName: user.displayName || '',
-      email: user.email || '',
-      photoURL: user.photoURL || '',
-      joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      lastActiveAt: firebase.firestore.FieldValue.serverTimestamp()
-    })
-  } else {
-    await ref.update({ lastActiveAt: firebase.firestore.FieldValue.serverTimestamp() })
-  }
-}
-
-function setupUserUI(user){
-  const wrap = document.getElementById('user-avatar-wrap')
-  if(user.photoURL){
-    wrap.innerHTML = `<img class="avatar" src="${user.photoURL}" onclick="openProfile()" onerror="this.style.display='none'" alt=""/>`
-  } else {
-    const initials = (user.displayName||user.email||'U').slice(0,2).toUpperCase()
-    wrap.innerHTML = `<div class="avatar-fallback" onclick="openProfile()">${initials}</div>`
-  }
-  document.getElementById('pm-name').textContent  = user.displayName || 'User'
-  document.getElementById('pm-email').textContent = user.email || ''
-  const h = new Date().getHours()
-  const greet = h<12?'Good morning':h<17?'Good afternoon':'Good evening'
-  document.getElementById('dash-greeting').textContent = greet+', '+(user.displayName||'').split(' ')[0]
-}
-
-async function signInWithGoogle(){
-  const btn = document.getElementById('google-signin-btn')
-  const errEl = document.getElementById('login-error')
+// ═══════════════════════════════════════
+function doSignIn(){
+  const btn = document.getElementById('btn-google')
+  const err = document.getElementById('login-err')
   btn.disabled = true
   btn.textContent = 'Redirecting to Google...'
-  errEl.textContent = ''
-  try{
-    const provider = new firebase.auth.GoogleAuthProvider()
-    provider.setCustomParameters({ prompt: 'select_account' })
-    // Use redirect — works on all mobile browsers and GitHub Pages
-    await firebase.auth().signInWithRedirect(provider)
-  }catch(e){
-    errEl.textContent = e.message
+  err.textContent = ''
+  const provider = new firebase.auth.GoogleAuthProvider()
+  provider.setCustomParameters({prompt:'select_account'})
+  auth.signInWithRedirect(provider).catch(e=>{
+    err.textContent = e.message
     btn.disabled = false
-    btn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google`
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google'
+  })
+}
+
+async function doSignOut(){
+  closeDrawer()
+  await auth.signOut()
+}
+
+async function saveProfile(u){
+  const ref = db.doc(`users/${u.uid}/profile/info`)
+  const snap = await ref.get()
+  const now = firebase.firestore.FieldValue.serverTimestamp()
+  if(!snap.exists){
+    await ref.set({uid:u.uid,displayName:u.displayName||'',email:u.email||'',photoURL:u.photoURL||'',joinedAt:now,lastActiveAt:now})
+    await db.doc(`admin/users/list/${u.uid}`).set({uid:u.uid,displayName:u.displayName||'',email:u.email||'',photoURL:u.photoURL||'',joinedAt:now,lastActiveAt:now})
+  } else {
+    await ref.update({lastActiveAt:now})
+    await db.doc(`admin/users/list/${u.uid}`).update({lastActiveAt:now}).catch(()=>{})
   }
 }
 
-async function signOutUser(){
-  const menu = document.getElementById('profile-menu')
-  const overlay = document.getElementById('pm-overlay')
-  if(menu){ menu.classList.remove('open'); menu.style.display='none' }
-  if(overlay){ overlay.classList.remove('open'); overlay.style.display='none' }
-  currentUser = null
-  await firebase.auth().signOut()
+function setupUI(u){
+  const wrap = document.getElementById('av-wrap')
+  if(u.photoURL){
+    wrap.innerHTML = `<img class="av" src="${u.photoURL}" onclick="openDrawer()" onerror="this.outerHTML='<div class=av-fb onclick=openDrawer()>${(u.displayName||'U').slice(0,2).toUpperCase()}</div>'" alt=""/>`
+  } else {
+    wrap.innerHTML = `<div class="av-fb" onclick="openDrawer()">${(u.displayName||u.email||'U').slice(0,2).toUpperCase()}</div>`
+  }
+  document.getElementById('dr-name').textContent  = u.displayName || 'User'
+  document.getElementById('dr-email').textContent = u.email || ''
+  const h = new Date().getHours()
+  document.getElementById('greeting').textContent = (h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+(u.displayName||'').split(' ')[0]
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // NAVIGATION
-// ═══════════════════════════════════════════════════
-function showLoginScreen(){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'))
-  document.getElementById('screen-login').classList.add('active')
-  document.getElementById('bottom-nav').style.display = 'none'
-  // hide profile menu and overlay
-  const menu = document.getElementById('profile-menu')
-  const overlay = document.getElementById('pm-overlay')
-  if(menu){ menu.classList.remove('open'); menu.style.display = 'none' }
-  if(overlay){ overlay.classList.remove('open'); overlay.style.display = 'none' }
-  // reset login button
-  const btn = document.getElementById('google-signin-btn')
+// ═══════════════════════════════════════
+function go(name, btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'))
+  document.getElementById('pg-'+name).classList.add('on')
   if(btn){
-    btn.disabled = false
-    btn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google`
+    document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'))
+    btn.classList.add('on')
   }
-  document.getElementById('login-error').textContent = ''
+  if(name==='tread') setNow('t')
+  if(name==='work')  setNow('w')
+  if(name==='hist')  loadHist()
+  if(name==='admin') loadAdmin()
 }
 
-function showScreen(name, btn){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'))
-  document.getElementById('screen-'+name).classList.add('active')
-  if(btn){
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'))
-    btn.classList.add('active')
-  }
-  if(name==='dashboard') updateDashboard()
-  if(name==='history')   renderHistory()
-  if(name==='treadmill') setNow('t')
-  if(name==='workout')   setNow('w')
-  if(name==='admin')     loadAdminData()
+function openDrawer(){
+  document.getElementById('drawer').classList.add('on')
+  document.getElementById('drawer-overlay').classList.add('on')
 }
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('on')
+  document.getElementById('drawer-overlay').classList.remove('on')
+}
+function closePM(){ document.getElementById('pmodal').classList.remove('on') }
+function openPM(url){ document.getElementById('pmodal-img').src=url; document.getElementById('pmodal').classList.add('on') }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // HELPERS
-// ═══════════════════════════════════════════════════
-const pad = n => String(n).padStart(2,'0')
-
+// ═══════════════════════════════════════
+const pad = n=>String(n).padStart(2,'0')
 function setNow(p){
-  const n = new Date()
-  document.getElementById(p+'-date').value = n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())
-  document.getElementById(p+'-time').value = pad(n.getHours())+':'+pad(n.getMinutes())
+  const n=new Date()
+  document.getElementById(p+'-date').value=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())
+  document.getElementById(p+'-time').value=pad(n.getHours())+':'+pad(n.getMinutes())
 }
-
-function showToast(msg){
-  const t = document.getElementById('toast')
-  t.textContent = msg; t.classList.add('show')
-  setTimeout(()=>t.classList.remove('show'), 3000)
+function toast(msg){
+  const t=document.getElementById('toast')
+  t.textContent=msg; t.classList.add('on')
+  setTimeout(()=>t.classList.remove('on'),3000)
 }
-
-function parseLocalDate(str){
-  if(!str) return new Date()
-  const p = String(str).split('-')
-  if(p.length===3) return new Date(+p[0], +p[1]-1, +p[2])
-  return new Date(str)
-}
-
-function fmtDate(str, opts){
-  return parseLocalDate(str).toLocaleDateString('en-IN', opts||{day:'numeric',month:'short'})
-}
-
-function localDateKey(d){
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())
-}
-
-function openProfile(){
-  if(!currentUser) return
-  document.getElementById('profile-menu').style.display = 'flex'
-  document.getElementById('pm-overlay').style.display = 'block'
-  // small delay so display:flex renders before transition
-  setTimeout(()=>{
-    document.getElementById('profile-menu').classList.add('open')
-    document.getElementById('pm-overlay').classList.add('open')
-  }, 10)
-}
-function closeProfile(){
-  const menu = document.getElementById('profile-menu')
-  const overlay = document.getElementById('pm-overlay')
-  menu.classList.remove('open')
-  overlay.classList.remove('open')
-  setTimeout(()=>{
-    if(!menu.classList.contains('open')){
-      menu.style.display = 'none'
-      overlay.style.display = 'none'
-    }
-  }, 320) // wait for CSS transition (0.3s)
-}
-function openPhotoModal(url){ document.getElementById('modal-img').src=url; document.getElementById('photo-modal').classList.add('open') }
-function closePhotoModal(){ document.getElementById('photo-modal').classList.remove('open') }
-
-function calcSpeed(){
+function pld(s){ if(!s)return new Date(); const p=String(s).split('-'); return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(s) }
+function fmt(s,o){ return pld(s).toLocaleDateString('en-IN',o||{day:'numeric',month:'short'}) }
+function ldk(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()) }
+function calcSpd(){
   const km=parseFloat(document.getElementById('t-km').value)
   const dur=parseFloat(document.getElementById('t-dur').value)
-  const el=document.getElementById('spd-val')
-  const hi=document.getElementById('t-spd')
-  if(km>0&&dur>0){ const s=(km/(dur/60)).toFixed(2); hi.value=s; el.textContent=s+' km/h'; el.style.color='var(--green)' }
-  else { hi.value=''; el.textContent='— km/h'; el.style.color='var(--text3)' }
+  const el=document.getElementById('spd-v')
+  if(km>0&&dur>0){ const s=(km/(dur/60)).toFixed(2); document.getElementById('t-spd').value=s; el.textContent=s+' km/h'; el.style.color='var(--g)' }
+  else { document.getElementById('t-spd').value=''; el.textContent='— km/h'; el.style.color='var(--t3)' }
+}
+function onChip(cb){
+  cb.closest('.chip').classList.toggle('on',cb.checked)
+  const sel=Array.from(document.querySelectorAll('#pg-work .chip input:checked')).map(c=>c.value)
+  document.getElementById('csumm').textContent=sel.length?'✓ '+sel.join(' + '):''
 }
 
-function toggleChip(cb){
-  cb.closest('.chip').classList.toggle('on', cb.checked)
-  const sel = Array.from(document.querySelectorAll('#screen-workout .chip input:checked')).map(c=>c.value)
-  document.getElementById('chip-summary').textContent = sel.length ? '✓ '+sel.join(' + ') : ''
+// ═══════════════════════════════════════
+// PHOTO
+// ═══════════════════════════════════════
+function onPhoto(e){
+  const file=e.target.files[0]; if(!file) return
+  pendingFile = file
+  const fd=new Date(file.lastModified)
+  const imgDate=fd.getFullYear()+'-'+pad(fd.getMonth()+1)+'-'+pad(fd.getDate())
+  const imgTime=pad(fd.getHours())+':'+pad(fd.getMinutes())
+  document.getElementById('t-date').value=imgDate
+  document.getElementById('t-time').value=imgTime
+  const bar=document.getElementById('pts-bar')
+  const period=fd.getHours()<12?'Morning':fd.getHours()<17?'Afternoon':'Evening'
+  bar.textContent=`📸 ${fmt(imgDate,{weekday:'short',day:'numeric',month:'short',year:'numeric'})} at ${imgTime} (${period})`
+  bar.style.display='block'
+  const r=new FileReader()
+  r.onload=ev=>{ const p=document.getElementById('photo-prev'); p.src=ev.target.result; p.style.display='block' }
+  r.readAsDataURL(file)
 }
 
-// ═══════════════════════════════════════════════════
-// PHOTO UPLOAD
-// ═══════════════════════════════════════════════════
-function handlePhoto(e){
-  const file = e.target.files[0]
-  if(!file) return
-  _pendingPhotoFile = file
-
-  // capture timestamp from file metadata (local time)
-  const fd = new Date(file.lastModified)
-  const imgDate = fd.getFullYear()+'-'+pad(fd.getMonth()+1)+'-'+pad(fd.getDate())
-  const imgTime = pad(fd.getHours())+':'+pad(fd.getMinutes())
-
-  // fill editable fields
-  document.getElementById('t-date').value = imgDate
-  document.getElementById('t-time').value = imgTime
-
-  // show timestamp bar
-  const bar = document.getElementById('photo-ts-bar')
-  const hh = fd.getHours()
-  const period = hh<12?'Morning':hh<17?'Afternoon':'Evening'
-  bar.textContent = `📸 ${fmtDate(imgDate,{weekday:'short',day:'numeric',month:'short',year:'numeric'})} at ${imgTime} (${period})`
-  bar.style.display = 'block'
-
-  // preview
-  const reader = new FileReader()
-  reader.onload = ev => {
-    const prev = document.getElementById('photo-preview')
-    prev.src = ev.target.result
-    prev.style.display = 'block'
-  }
-  reader.readAsDataURL(file)
-}
-
-async function uploadScreenshot(file, userId, sessionId){
-  const path = `screenshots/${userId}/${sessionId}`
-  const ref  = storage.ref(path)
-  const prog = document.getElementById('upload-progress')
-  const bar  = document.getElementById('upload-bar')
-  prog.style.display = 'block'
-  return new Promise((resolve, reject) => {
-    const task = ref.put(file)
+async function uploadPhoto(file, uid, sid){
+  const ref=storage.ref(`screenshots/${uid}/${sid}`)
+  const prog=document.getElementById('uprog')
+  const bar=document.getElementById('uprog-bar')
+  prog.style.display='block'
+  return new Promise((res,rej)=>{
+    const task=ref.put(file)
     task.on('state_changed',
-      snap => { bar.style.width = Math.round(snap.bytesTransferred/snap.totalBytes*100)+'%' },
-      err  => { prog.style.display='none'; reject(err) },
-      async () => {
-        const url = await task.snapshot.ref.getDownloadURL()
-        prog.style.display = 'none'
-        bar.style.width = '0%'
-        resolve({ url, path })
-      }
+      s=>{ bar.style.width=Math.round(s.bytesTransferred/s.totalBytes*100)+'%' },
+      e=>{ prog.style.display='none'; rej(e) },
+      async ()=>{ const url=await task.snapshot.ref.getDownloadURL(); prog.style.display='none'; bar.style.width='0'; res({url,path:`screenshots/${uid}/${sid}`}) }
     )
   })
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // SAVE TREADMILL
-// ═══════════════════════════════════════════════════
-async function saveTreadmill(){
-  if(!currentUser){ showToast('Please sign in first'); return }
-  const date = document.getElementById('t-date').value
-  const km   = document.getElementById('t-km').value
-  if(!date||!km){ showToast('⚠️ Date and distance are required'); return }
-
-  const btn = document.getElementById('t-save-btn')
-  btn.disabled = true; btn.textContent = '⏳ Saving...'
-
+// ═══════════════════════════════════════
+async function saveTread(){
+  if(!user){ toast('Please sign in first'); return }
+  const date=document.getElementById('t-date').value
+  const km=document.getElementById('t-km').value
+  if(!date||!km){ toast('⚠️ Date and distance required'); return }
+  const btn=document.getElementById('t-btn')
+  btn.disabled=true; btn.textContent='⏳ Saving...'
   try{
-    const sessionId = db.collection('_').doc().id
-    const fd = new Date(document.getElementById('t-date').value+'T'+document.getElementById('t-time').value)
-    const capturedAt = _pendingPhotoFile ? new Date(_pendingPhotoFile.lastModified) : fd
-
-    let screenshotUrl = null, screenshotPath = null
-    if(_pendingPhotoFile){
-      btn.textContent = '⏳ Uploading photo...'
-      const up = await uploadScreenshot(_pendingPhotoFile, currentUser.uid, sessionId)
-      screenshotUrl = up.url; screenshotPath = up.path
-    }
-
-    await db.collection('users').doc(currentUser.uid)
-      .collection('treadmill').doc(sessionId).set({
-        sessionId,
-        userId: currentUser.uid,
-        date: document.getElementById('t-date').value,
-        time: document.getElementById('t-time').value,
-        capturedAt: firebase.firestore.Timestamp.fromDate(capturedAt),
-        distance_km: parseFloat(km)||0,
-        calories: parseInt(document.getElementById('t-cal').value)||0,
-        duration_min: parseInt(document.getElementById('t-dur').value)||0,
-        avg_speed_kmh: parseFloat(document.getElementById('t-spd').value)||0,
-        notes: document.getElementById('t-notes').value||'',
-        screenshotUrl, screenshotPath,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      })
-
-    // update admin summary
-    await db.collection('admin').doc('users').collection('list').doc(currentUser.uid)
-      .update({ lastActiveAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{})
-
-    showToast('✅ Session saved!')
-    resetTreadmillForm()
-    updateDashboard()
-  }catch(e){
-    showToast('❌ Error: '+e.message)
-  }
-  btn.disabled = false; btn.textContent = 'Save Session'
+    const sid=db.collection('_').doc().id
+    const fd=new Date(document.getElementById('t-date').value+'T'+document.getElementById('t-time').value)
+    const capturedAt=pendingFile?new Date(pendingFile.lastModified):fd
+    let screenshotUrl=null, screenshotPath=null
+    if(pendingFile){ btn.textContent='⏳ Uploading photo...'; const up=await uploadPhoto(pendingFile,user.uid,sid); screenshotUrl=up.url; screenshotPath=up.path }
+    await db.doc(`users/${user.uid}/treadmill/${sid}`).set({
+      sessionId:sid, userId:user.uid,
+      date:document.getElementById('t-date').value,
+      time:document.getElementById('t-time').value,
+      capturedAt:firebase.firestore.Timestamp.fromDate(capturedAt),
+      distance_km:parseFloat(km)||0,
+      calories:parseInt(document.getElementById('t-cal').value)||0,
+      duration_min:parseInt(document.getElementById('t-dur').value)||0,
+      avg_speed_kmh:parseFloat(document.getElementById('t-spd').value)||0,
+      notes:document.getElementById('t-notes').value||'',
+      screenshotUrl, screenshotPath,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    })
+    toast('✅ Session saved!')
+    resetTread()
+    loadDash()
+  }catch(e){ toast('❌ '+e.message) }
+  btn.disabled=false; btn.textContent='Save Session'
 }
 
-function resetTreadmillForm(){
+function resetTread(){
   ;['t-km','t-cal','t-dur','t-notes'].forEach(id=>document.getElementById(id).value='')
   document.getElementById('t-spd').value=''
-  document.getElementById('spd-val').textContent='— km/h'
-  document.getElementById('spd-val').style.color='var(--text3)'
-  document.getElementById('photo-preview').style.display='none'
-  document.getElementById('photo-preview').src=''
-  document.getElementById('photo-ts-bar').style.display='none'
-  document.getElementById('photo-camera').value=''
-  document.getElementById('photo-gallery').value=''
-  _pendingPhotoFile = null
+  document.getElementById('spd-v').textContent='— km/h'
+  document.getElementById('spd-v').style.color='var(--t3)'
+  document.getElementById('photo-prev').style.display='none'
+  document.getElementById('photo-prev').src=''
+  document.getElementById('pts-bar').style.display='none'
+  document.getElementById('pc').value=''
+  document.getElementById('pg-file').value=''
+  pendingFile=null
   setNow('t')
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // SAVE WORKOUT
-// ═══════════════════════════════════════════════════
-async function saveWorkout(){
-  if(!currentUser){ showToast('Please sign in first'); return }
-  const date   = document.getElementById('w-date').value
-  const muscle = Array.from(document.querySelectorAll('#screen-workout .chip input:checked')).map(c=>c.value)
-  if(!date||!muscle.length){ showToast('⚠️ Date and muscle group required'); return }
-
-  const btn = document.getElementById('w-save-btn')
-  btn.disabled = true; btn.textContent = '⏳ Saving...'
-
+// ═══════════════════════════════════════
+async function saveWork(){
+  if(!user){ toast('Please sign in first'); return }
+  const date=document.getElementById('w-date').value
+  const muscle=Array.from(document.querySelectorAll('#pg-work .chip input:checked')).map(c=>c.value)
+  if(!date||!muscle.length){ toast('⚠️ Date and muscle group required'); return }
+  const btn=document.getElementById('w-btn')
+  btn.disabled=true; btn.textContent='⏳ Saving...'
   try{
-    const sessionId = db.collection('_').doc().id
-    await db.collection('users').doc(currentUser.uid)
-      .collection('workouts').doc(sessionId).set({
-        sessionId,
-        userId: currentUser.uid,
-        date,
-        time: document.getElementById('w-time').value,
-        muscleGroups: muscle,
-        exercises: document.getElementById('w-exercises').value||'',
-        sets: parseInt(document.getElementById('w-sets').value)||0,
-        reps: parseInt(document.getElementById('w-reps').value)||0,
-        energyLevel: parseInt(document.getElementById('w-energy').value)||0,
-        notes: document.getElementById('w-notes').value||'',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      })
-
-    await db.collection('admin').doc('users').collection('list').doc(currentUser.uid)
-      .update({ lastActiveAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{})
-
-    showToast('✅ Workout saved!')
-    resetWorkoutForm()
-    updateDashboard()
-  }catch(e){
-    showToast('❌ Error: '+e.message)
-  }
-  btn.disabled = false; btn.textContent = 'Save Workout'
+    const sid=db.collection('_').doc().id
+    await db.doc(`users/${user.uid}/workouts/${sid}`).set({
+      sessionId:sid, userId:user.uid,
+      date, time:document.getElementById('w-time').value,
+      muscleGroups:muscle,
+      exercises:document.getElementById('w-ex').value||'',
+      sets:parseInt(document.getElementById('w-sets').value)||0,
+      reps:parseInt(document.getElementById('w-reps').value)||0,
+      energyLevel:parseInt(document.getElementById('w-energy').value)||0,
+      notes:document.getElementById('w-notes').value||'',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    })
+    toast('✅ Workout saved!')
+    resetWork()
+    loadDash()
+  }catch(e){ toast('❌ '+e.message) }
+  btn.disabled=false; btn.textContent='Save Workout'
 }
 
-function resetWorkoutForm(){
-  document.querySelectorAll('#screen-workout .chip input').forEach(c=>{ c.checked=false; c.closest('.chip').classList.remove('on') })
-  document.getElementById('chip-summary').textContent=''
-  ;['w-exercises','w-sets','w-reps','w-notes'].forEach(id=>document.getElementById(id).value='')
+function resetWork(){
+  document.querySelectorAll('#pg-work .chip input').forEach(c=>{ c.checked=false; c.closest('.chip').classList.remove('on') })
+  document.getElementById('csumm').textContent=''
+  ;['w-ex','w-sets','w-reps','w-notes'].forEach(id=>document.getElementById(id).value='')
   document.getElementById('w-energy').value=''
   setNow('w')
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // DASHBOARD
-// ═══════════════════════════════════════════════════
-async function updateDashboard(){
-  if(!currentUser) return
+// ═══════════════════════════════════════
+async function loadDash(){
+  if(!user) return
   try{
-    const [tmSnap, woSnap] = await Promise.all([
-      db.collection('users').doc(currentUser.uid).collection('treadmill').orderBy('date','desc').get(),
-      db.collection('users').doc(currentUser.uid).collection('workouts').orderBy('date','desc').get()
+    const [ts,ws]=await Promise.all([
+      db.collection(`users/${user.uid}/treadmill`).orderBy('date','desc').get(),
+      db.collection(`users/${user.uid}/workouts`).orderBy('date','desc').get()
     ])
-    const tm = tmSnap.docs.map(d=>d.data())
-    const wo = woSnap.docs.map(d=>d.data())
-
-    document.getElementById('kpi-km').textContent      = tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1)
-    document.getElementById('kpi-cal').textContent     = tm.reduce((s,r)=>s+(r.calories||0),0).toLocaleString()
-    document.getElementById('kpi-min').textContent     = tm.reduce((s,r)=>s+(r.duration_min||0),0)
-    document.getElementById('kpi-sessions').textContent= tm.length
-
-    renderChart(tm)
-    renderStreak(tm, wo)
-    renderGymTime(tm, wo)
-  }catch(e){ console.error('Dashboard error:', e) }
+    const tm=ts.docs.map(d=>d.data())
+    const wo=ws.docs.map(d=>d.data())
+    document.getElementById('kpi-km').textContent=tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1)
+    document.getElementById('kpi-cal').textContent=tm.reduce((s,r)=>s+(r.calories||0),0).toLocaleString()
+    document.getElementById('kpi-min').textContent=tm.reduce((s,r)=>s+(r.duration_min||0),0)
+    document.getElementById('kpi-sess').textContent=tm.length
+    drawChart(tm)
+    drawStreak(tm,wo)
+    drawGymTime(tm,wo)
+  }catch(e){ console.error('Dashboard:',e) }
 }
 
-// ═══════════════════════════════════════════════════
-// CHART
-// ═══════════════════════════════════════════════════
-function setChartView(view){
-  currentChartView = view
-  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'))
-  document.getElementById('ct-'+(view==='monthly'?'mo':view)).classList.add('active')
-  updateDashboard()
+function setView(v){
+  cv=v
+  document.querySelectorAll('.ct').forEach(b=>b.classList.remove('on'))
+  document.getElementById('ct-'+v).classList.add('on')
+  loadDash()
 }
 
-function renderChart(tm){
-  const view = currentChartView
-  let labels=[], kms=[], rangeLabel=''
-
-  if(view==='7d'){
-    for(let i=6;i>=0;i--){
-      const d=new Date(); d.setDate(d.getDate()-i)
-      const k=localDateKey(d)
-      labels.push(d.getDate()+' '+d.toLocaleDateString('en-IN',{month:'short'}))
-      kms.push(parseFloat(tm.filter(r=>r.date===k).reduce((s,r)=>s+(r.distance_km||0),0).toFixed(2)))
-    }
-    rangeLabel='Last 7 days'
-  } else if(view==='30d'){
-    for(let i=29;i>=0;i--){
-      const d=new Date(); d.setDate(d.getDate()-i)
-      const k=localDateKey(d)
-      labels.push(i%5===0||i===0 ? d.getDate()+'/'+(d.getMonth()+1) : '')
-      kms.push(parseFloat(tm.filter(r=>r.date===k).reduce((s,r)=>s+(r.distance_km||0),0).toFixed(2)))
-    }
-    rangeLabel='Last 30 days'
+function drawChart(tm){
+  let labels=[],kms=[],lbl=''
+  if(cv==='7d'){
+    for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=ldk(d); labels.push(d.getDate()+' '+d.toLocaleDateString('en-IN',{month:'short'})); kms.push(+tm.filter(r=>r.date===k).reduce((s,r)=>s+(r.distance_km||0),0).toFixed(2)) }
+    lbl='Last 7 days'
+  } else if(cv==='30d'){
+    for(let i=29;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=ldk(d); labels.push(i%5===0||i===0?d.getDate()+'/'+(d.getMonth()+1):''); kms.push(+tm.filter(r=>r.date===k).reduce((s,r)=>s+(r.distance_km||0),0).toFixed(2)) }
+    lbl='Last 30 days'
   } else {
-    for(let i=5;i>=0;i--){
-      const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i)
-      const yr=d.getFullYear(), mo=d.getMonth()
-      const mk=tm.filter(r=>{ const rd=parseLocalDate(r.date); return rd.getFullYear()===yr&&rd.getMonth()===mo }).reduce((s,r)=>s+(r.distance_km||0),0)
-      labels.push(d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'}))
-      kms.push(parseFloat(mk.toFixed(2)))
-    }
-    rangeLabel='Last 6 months'
+    for(let i=5;i>=0;i--){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i); const yr=d.getFullYear(),mo=d.getMonth(); kms.push(+tm.filter(r=>{ const rd=pld(r.date); return rd.getFullYear()===yr&&rd.getMonth()===mo }).reduce((s,r)=>s+(r.distance_km||0),0).toFixed(2)); labels.push(d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'})) }
+    lbl='Last 6 months'
   }
-  document.getElementById('chart-range').textContent = rangeLabel
-  const ctx=document.getElementById('chart-main').getContext('2d')
-  if(mainChart) mainChart.destroy()
-  mainChart=new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        data:kms,
-        backgroundColor:kms.map(v=>v>0?'rgba(0,229,160,0.2)':'rgba(60,60,60,0.4)'),
-        borderColor:kms.map(v=>v>0?'#00e5a0':'#444'),
-        borderWidth:1.5, borderRadius:4
-      }]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y} km`}}},
-      scales:{
-        y:{beginAtZero:true,ticks:{color:'#666',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'}},
-        x:{ticks:{color:'#666',font:{size:10},maxRotation:0},grid:{display:false}}
-      }
-    }
-  })
+  document.getElementById('chart-lbl').textContent=lbl
+  const ctx=document.getElementById('chart').getContext('2d')
+  if(mc) mc.destroy()
+  mc=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:kms,backgroundColor:kms.map(v=>v>0?'rgba(0,229,160,0.2)':'rgba(50,50,50,0.5)'),borderColor:kms.map(v=>v>0?'#00e5a0':'#444'),borderWidth:1.5,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y} km`}}},scales:{y:{beginAtZero:true,ticks:{color:'#555',font:{size:10,family:'DM Mono'}},grid:{color:'rgba(255,255,255,0.04)'}},x:{ticks:{color:'#555',font:{size:10},maxRotation:0},grid:{display:false}}}}})
 }
 
-// ═══════════════════════════════════════════════════
-// STREAK
-// ═══════════════════════════════════════════════════
-function renderStreak(tm, wo){
-  const el=document.getElementById('streak-row'); el.innerHTML=''
-  const days=['M','T','W','T','F','S','S']
-  for(let i=6;i>=0;i--){
-    const d=new Date(); d.setDate(d.getDate()-i)
-    const k=localDateKey(d)
-    const ok=tm.some(r=>r.date===k)||wo.some(r=>r.date===k)
-    const dot=document.createElement('div')
-    dot.className='streak-dot'+(ok?' done':(i===0?' today':''))
-    dot.textContent=days[d.getDay()===0?6:d.getDay()-1]
-    el.appendChild(dot)
-  }
+function drawStreak(tm,wo){
+  const el=document.getElementById('streak'); el.innerHTML=''
+  const dn=['M','T','W','T','F','S','S']
+  for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=ldk(d); const ok=tm.some(r=>r.date===k)||wo.some(r=>r.date===k); const dot=document.createElement('div'); dot.className='sd'+(ok?' done':(i===0?' today':'')); dot.textContent=dn[d.getDay()===0?6:d.getDay()-1]; el.appendChild(dot) }
 }
 
-// ═══════════════════════════════════════════════════
-// GYM TIME VISUAL
-// ═══════════════════════════════════════════════════
-function renderGymTime(tm, wo){
-  const container = document.getElementById('gym-time-vis')
-  const all=[
-    ...tm.map(r=>({date:r.date,time:r.time,type:'t'})),
-    ...wo.map(r=>({date:r.date,time:r.time,type:'w'}))
-  ]
-  if(!all.length){ container.innerHTML='<div style="text-align:center;padding:16px;font-size:13px;color:var(--text3)">No sessions logged yet</div>'; return }
-
+function drawGymTime(tm,wo){
+  const c=document.getElementById('gymtime')
+  const all=[...tm.map(r=>({date:r.date,time:r.time,type:'t'})),...wo.map(r=>({date:r.date,time:r.time,type:'w'}))]
+  if(!all.length){ c.innerHTML='<div style="text-align:center;padding:16px;font-size:13px;color:var(--t3)">No sessions yet</div>'; return }
   const slots=[
-    {label:'Before 6am',key:'e',r:[0,6],   color:'#b388ff'},
-    {label:'6 – 9 am',  key:'m',r:[6,9],   color:'#00e5a0'},
-    {label:'9 – 11 am', key:'mi',r:[9,11], color:'#4da6ff'},
-    {label:'11am – 2pm',key:'n',r:[11,14], color:'#ffb830'},
-    {label:'2 – 5 pm',  key:'a',r:[14,17], color:'#ff9f43'},
-    {label:'After 5pm', key:'ev',r:[17,24], color:'#ff6b81'},
+    {l:'Before 6am',k:'e',r:[0,6],   col:'#b388ff'},
+    {l:'6 – 9 am',  k:'m',r:[6,9],   col:'#00e5a0'},
+    {l:'9 – 11 am', k:'mi',r:[9,11], col:'#4da6ff'},
+    {l:'11am – 2pm',k:'n',r:[11,14], col:'#ffb830'},
+    {l:'2 – 5 pm',  k:'a',r:[14,17], col:'#ff9f43'},
+    {l:'After 5pm', k:'ev',r:[17,24], col:'#ff6b81'},
   ]
-  const counts={}; slots.forEach(s=>counts[s.key]=0)
+  const counts={}; slots.forEach(s=>counts[s.k]=0)
   const visits=[]
-
-  all.forEach(r=>{
-    const t=(r.time||'').trim(); if(!t) return
-    const h=parseInt(t.split(':')[0]); if(isNaN(h)) return
-    const s=slots.find(s=>h>=s.r[0]&&h<s.r[1]); if(s) counts[s.key]++
-    visits.push({date:r.date,time:t,hour:h,type:r.type})
-  })
-
+  all.forEach(r=>{ const t=(r.time||'').trim(); if(!t)return; const h=parseInt(t.split(':')[0]); if(isNaN(h))return; const s=slots.find(s=>h>=s.r[0]&&h<s.r[1]); if(s)counts[s.k]++; visits.push({date:r.date,time:t,hour:h,type:r.type}) })
   const total=visits.length
   const maxC=Math.max(...Object.values(counts),1)
   const bestKey=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0]
   const early=(counts['e']||0)+(counts['m']||0)+(counts['mi']||0)
-  const earlyPct=total>0?Math.round(early/total*100):0
-
-  let msg='',mc=''
-  if(earlyPct>=70){msg=`🌅 Early bird! ${earlyPct}% of sessions before 11am`;mc='var(--green)'}
-  else if(earlyPct>=40){msg=`🌤 Good mix — ${earlyPct}% before 11am. Push for mornings!`;mc='var(--amber)'}
-  else{msg=`🌙 Most sessions are later. Morning workouts boost metabolism all day!`;mc='var(--red)'}
-
-  let html=`<div style="font-size:12px;color:${mc};font-weight:500;padding:8px 10px;border-radius:6px;background:var(--bg3);margin-bottom:12px;line-height:1.5">${msg}</div>`
-
-  slots.forEach(s=>{
-    const cnt=counts[s.key]
-    const pct=Math.round((cnt/maxC)*100)
-    const isBest=s.key===bestKey&&cnt>0
-    html+=`<div class="tslot">
-      <div class="tslot-lbl">${s.label}</div>
-      <div class="tslot-track">
-        <div class="tslot-bar" style="width:${cnt>0?Math.max(pct,5):0}%;background:${s.color}${isBest?'':'66'}">
-          ${cnt>0?`<span class="tslot-cnt">${cnt}</span>`:''}
-        </div>
-        ${cnt===0?`<span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text3)">0</span>`:''}
-      </div>
-      <div class="tslot-tag" style="color:${s.color}">${isBest&&cnt>0?'best':''}</div>
-    </div>`
+  const ePct=total>0?Math.round(early/total*100):0
+  let msg='',mc2='',mbg=''
+  if(ePct>=70){msg=`🌅 Early bird! ${ePct}% of sessions before 11am`;mc2='var(--g)';mbg='rgba(0,229,160,0.08)'}
+  else if(ePct>=40){msg=`🌤 Good mix — ${ePct}% before 11am. Push for mornings!`;mc2='var(--amb)';mbg='rgba(255,184,48,0.08)'}
+  else{msg=`🌙 Most sessions are later. Morning workouts are more effective!`;mc2='var(--red)';mbg='rgba(255,71,87,0.08)'}
+  let html=`<div style="font-size:12px;color:${mc2};font-weight:500;padding:8px 10px;border-radius:6px;background:${mbg};margin-bottom:12px;line-height:1.5">${msg}</div>`
+  slots.forEach(s=>{ const cnt=counts[s.k]; const pct=Math.round(cnt/maxC*100); const isBest=s.k===bestKey&&cnt>0
+    html+=`<div class="tsl"><div class="tsl-l">${s.l}</div><div class="tsl-tr"><div class="tsl-b" style="width:${cnt>0?Math.max(pct,5):0}%;background:${s.col}${isBest?'':'55'}">${cnt>0?`<span class="tsl-c">${cnt}</span>`:''}</div>${cnt===0?`<span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--t3)">0</span>`:''}</div><div class="tsl-tag" style="color:${s.col}">${isBest&&cnt>0?'best':''}</div></div>`
   })
-
-  html+=`<div style="font-size:11px;color:var(--text3);text-align:center;margin:8px 0 10px">${total} sessions tracked</div>`
-
-  const recent=visits.sort((a,b)=>{const da=parseLocalDate(a.date),db=parseLocalDate(b.date);return db-da||(b.time||'').localeCompare(a.time||'')}).slice(0,5)
+  html+=`<div style="font-size:11px;color:var(--t3);text-align:center;margin:8px 0 10px">${total} total sessions</div>`
+  const recent=visits.sort((a,b)=>{const da=pld(a.date),db=pld(b.date);return db-da||(b.time||'').localeCompare(a.time||'')}).slice(0,5)
   if(recent.length){
-    html+='<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px">Recent</div>'
-    recent.forEach(v=>{
-      const dot=v.hour<9?'#00e5a0':v.hour<14?'#ffb830':'#ff6b81'
-      const icon=v.type==='t'?'🏃':'💪'
-      html+=`<div class="visit-row">
-        <div class="visit-dot" style="background:${dot}"></div>
-        <span style="font-size:15px">${icon}</span>
-        <span style="flex:1;font-size:13px;font-weight:500">${fmtDate(v.date,{weekday:'short',day:'numeric',month:'short'})}</span>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--text2)">${v.time}</span>
-      </div>`
+    html+='<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px">Recent</div>'
+    recent.forEach(v=>{ const dot=v.hour<9?'#00e5a0':v.hour<14?'#ffb830':'#ff6b81'; const icon=v.type==='t'?'🏃':'💪'
+      html+=`<div class="vrow"><div class="vdot" style="background:${dot}"></div><span style="font-size:15px">${icon}</span><span style="flex:1;font-size:13px;font-weight:500">${fmt(v.date,{weekday:'short',day:'numeric',month:'short'})}</span><span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${v.time}</span></div>`
     })
   }
-  container.innerHTML=html
+  c.innerHTML=html
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // HISTORY
-// ═══════════════════════════════════════════════════
-async function renderHistory(){
-  if(!currentUser) return
-  const el=document.getElementById('history-list')
-  el.innerHTML='<div class="empty"><div class="empty-icon">⏳</div><p>Loading...</p></div>'
+// ═══════════════════════════════════════
+async function loadHist(){
+  if(!user) return
+  const el=document.getElementById('hist-body')
+  el.innerHTML='<div class="empty"><div class="empty-i">⏳</div><p>Loading...</p></div>'
   try{
-    const [tmS,woS]=await Promise.all([
-      db.collection('users').doc(currentUser.uid).collection('treadmill').orderBy('date','desc').get(),
-      db.collection('users').doc(currentUser.uid).collection('workouts').orderBy('date','desc').get()
+    const [ts,ws]=await Promise.all([
+      db.collection(`users/${user.uid}/treadmill`).orderBy('date','desc').get(),
+      db.collection(`users/${user.uid}/workouts`).orderBy('date','desc').get()
     ])
-    const tm=tmS.docs.map(d=>({...d.data(),_type:'t'}))
-    const wo=woS.docs.map(d=>({...d.data(),_type:'w'}))
-    const all=[...tm,...wo].sort((a,b)=>{
-      const da=parseLocalDate(a.date),db=parseLocalDate(b.date)
-      return db-da||(b.time||'').localeCompare(a.time||'')
-    })
-    if(!all.length){ el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>No sessions yet</p></div>'; return }
+    const tm=ts.docs.map(d=>({...d.data(),_t:'t'}))
+    const wo=ws.docs.map(d=>({...d.data(),_t:'w'}))
+    const all=[...tm,...wo].sort((a,b)=>{ const da=pld(a.date),db=pld(b.date); return db-da||(b.time||'').localeCompare(a.time||'') })
+    if(!all.length){ el.innerHTML='<div class="empty"><div class="empty-i">📋</div><p>No sessions yet</p></div>'; return }
     el.innerHTML=all.map(r=>{
-      const dt=fmtDate(r.date)
-      if(r._type==='t'){
-        const thumb=r.screenshotUrl?`<img class="hist-thumb" src="${r.screenshotUrl}" onclick="openPhotoModal('${r.screenshotUrl}')" alt="screenshot"/>`:''
-        return `<div class="hist-item">
-          <div class="hist-icon t">🏃</div>
-          <div class="hist-info">
-            <div class="hist-title">${r.distance_km||0} km · ${r.calories||0} cal</div>
-            <div class="hist-sub">${r.duration_min||0} min · ${r.avg_speed_kmh||0} km/h${r.notes?' · '+r.notes:''}</div>
-          </div>
-          ${thumb}
-          <div class="hist-date">${dt}<br/><span style="color:var(--text3)">${r.time||''}</span></div>
-        </div>`
+      const dt=fmt(r.date)
+      if(r._t==='t'){
+        const thumb=r.screenshotUrl?`<img class="hi-thumb" src="${r.screenshotUrl}" onclick="openPM('${r.screenshotUrl}')" alt="screenshot"/>`:''
+        return `<div class="hi"><div class="hi-icon hi-t">🏃</div><div class="hi-info"><div class="hi-title">${r.distance_km||0} km · ${r.calories||0} cal</div><div class="hi-sub">${r.duration_min||0} min · ${r.avg_speed_kmh||0} km/h${r.notes?' · '+r.notes:''}</div></div>${thumb}<div class="hi-date">${dt}<br/><span style="color:var(--t3)">${r.time||''}</span></div></div>`
       }
-      return `<div class="hist-item">
-        <div class="hist-icon w">💪</div>
-        <div class="hist-info">
-          <div class="hist-title">${(r.muscleGroups||[]).join(' + ')}</div>
-          <div class="hist-sub">${r.exercises||''}${r.sets?' · '+r.sets+'×'+r.reps:''}</div>
-        </div>
-        <div class="hist-date">${dt}<br/><span style="color:var(--text3)">${r.time||''}</span></div>
-      </div>`
+      return `<div class="hi"><div class="hi-icon hi-w">💪</div><div class="hi-info"><div class="hi-title">${(r.muscleGroups||[]).join(' + ')}</div><div class="hi-sub">${r.exercises||''}${r.sets?' · '+r.sets+'×'+r.reps:''}</div></div><div class="hi-date">${dt}<br/><span style="color:var(--t3)">${r.time||''}</span></div></div>`
     }).join('')
-  }catch(e){ el.innerHTML='<div class="empty"><p>Error loading history</p></div>' }
+  }catch(e){ el.innerHTML='<div class="empty"><p>Error loading</p></div>' }
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // MOTIVATION
-// ═══════════════════════════════════════════════════
-async function getMotivation(){
-  const fallbacks=[
-    "Every rep, every km, every drop of sweat is building a better you. Keep showing up! 🔥",
-    "The only bad workout is the one that didn't happen. You're here — that's already a win! 💪",
-    "Progress isn't always visible but it's always happening. Trust the process! ⚡",
-    "Your future self is cheering you on. Don't let them down! 🏆",
-    "Small consistent actions lead to extraordinary results. Keep going! 🌟"
-  ]
-  document.getElementById('motivation-box').textContent = fallbacks[Math.floor(Math.random()*fallbacks.length)]
+// ═══════════════════════════════════════
+function getMotiv(){
+  const msgs=["Every rep, every km builds a better you. Keep showing up! 🔥","The only bad workout is the one that didn't happen. You're here — that's already a win! 💪","Progress isn't always visible but it's always happening. Trust the process! ⚡","Your future self is cheering you on right now. Don't let them down! 🏆","Small consistent actions lead to extraordinary results. Keep going! 🌟","Pain is temporary. Your fitness gains are permanent. Push through! 🎯"]
+  document.getElementById('motiv-txt').textContent = msgs[Math.floor(Math.random()*msgs.length)]
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // ADMIN
-// ═══════════════════════════════════════════════════
-async function loadAdminData(){
-  if(!currentUser||currentUser.uid!==ADMIN_UID) return
+// ═══════════════════════════════════════
+async function loadAdmin(){
+  if(!user||user.uid!==ADMIN_UID) return
   try{
-    const usersSnap=await db.collection('admin').doc('users').collection('list').orderBy('lastActiveAt','desc').get()
-    const users=usersSnap.docs.map(d=>d.data())
-    document.getElementById('admin-users').textContent=users.length
-
-    let totalSessions=0
-    const listEl=document.getElementById('admin-user-list')
-    listEl.innerHTML=''
-
+    const snap=await db.collection('admin/users/list').orderBy('lastActiveAt','desc').get()
+    const users=snap.docs.map(d=>d.data())
+    document.getElementById('adm-u').textContent=users.length
+    let total=0
+    const listEl=document.getElementById('adm-list'); listEl.innerHTML=''
     for(const u of users){
-      const [tmS,woS]=await Promise.all([
-        db.collection('users').doc(u.uid).collection('treadmill').get(),
-        db.collection('users').doc(u.uid).collection('workouts').get()
-      ])
-      const sessions=tmS.size+woS.size
-      totalSessions+=sessions
+      const [ts,ws]=await Promise.all([db.collection(`users/${u.uid}/treadmill`).get(),db.collection(`users/${u.uid}/workouts`).get()])
+      const sess=ts.size+ws.size; total+=sess
       const last=u.lastActiveAt?.toDate()
       const lastStr=last?last.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' '+last.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'
-      const avatarHtml=u.photoURL?`<img class="admin-avatar" src="${u.photoURL}" onerror="this.style.display='none'" alt=""/>`:`<div class="admin-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--bg3);font-size:13px;font-weight:600;color:var(--text2)">${(u.displayName||u.email||'U').slice(0,2).toUpperCase()}</div>`
-      listEl.innerHTML+=`<div class="admin-user">
-        ${avatarHtml}
-        <div class="admin-info">
-          <div class="admin-name">${u.displayName||'—'}</div>
-          <div class="admin-email">${u.email||''}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">Last active: ${lastStr}</div>
-        </div>
-        <div class="admin-stats">
-          <div class="admin-stat-val">${sessions}</div>
-          <div class="admin-stat-lbl">sessions</div>
-        </div>
-      </div>`
+      const avHtml=u.photoURL?`<img class="au-av" src="${u.photoURL}" onerror="this.textContent='${(u.displayName||'U').slice(0,2).toUpperCase()}'" alt=""/>`:`<div class="au-av">${(u.displayName||u.email||'U').slice(0,2).toUpperCase()}</div>`
+      listEl.innerHTML+=`<div class="au">${avHtml}<div class="au-info"><div class="au-name">${u.displayName||'—'}</div><div class="au-email">${u.email||''}</div><div style="font-size:10px;color:var(--t3);margin-top:2px">Last: ${lastStr}</div></div><div class="au-stats"><div class="au-sv">${sess}</div><div class="au-sl">sessions</div></div></div>`
     }
-    document.getElementById('admin-sessions').textContent=totalSessions
-  }catch(e){ console.error('Admin error:',e) }
+    document.getElementById('adm-s').textContent=total
+  }catch(e){ console.error('Admin:',e) }
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 // EXPORT CSV
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════
 async function exportCSV(type){
-  if(!currentUser) return
+  if(!user) return
   try{
-    const snap=await db.collection('users').doc(currentUser.uid).collection(type==='treadmill'?'treadmill':'workouts').orderBy('date','desc').get()
+    const snap=await db.collection(`users/${user.uid}/${type==='treadmill'?'treadmill':'workouts'}`).orderBy('date','desc').get()
     const rows=snap.docs.map(d=>d.data())
-    let headers,data,filename
+    let hdr,data,fname
     if(type==='treadmill'){
-      headers=['Date','Time','Distance (km)','Calories','Duration (min)','Avg Speed (km/h)','Notes','Screenshot URL']
+      hdr=['Date','Time','Distance (km)','Calories','Duration (min)','Avg Speed (km/h)','Notes','Screenshot URL']
       data=rows.map(r=>[r.date,r.time,r.distance_km,r.calories,r.duration_min,r.avg_speed_kmh,r.notes||'',r.screenshotUrl||''])
-      filename='pulselog_treadmill.csv'
+      fname='pulselog_treadmill.csv'
     } else {
-      headers=['Date','Time','Muscle Groups','Exercises','Sets','Reps','Energy','Notes']
+      hdr=['Date','Time','Muscle Groups','Exercises','Sets','Reps','Energy','Notes']
       data=rows.map(r=>[r.date,r.time,(r.muscleGroups||[]).join('+'),r.exercises||'',r.sets,r.reps,r.energyLevel,r.notes||''])
-      filename='pulselog_workouts.csv'
+      fname='pulselog_workouts.csv'
     }
-    if(!data.length){ showToast('No data to export yet'); return }
-    const csv=[headers,...data].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')
-    const a=document.createElement('a')
-    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}))
-    a.download=filename; a.click()
-    showToast('✅ CSV exported!')
-    closeProfile()
-  }catch(e){ showToast('Export error: '+e.message) }
+    if(!data.length){ toast('No data to export'); return }
+    const csv=[hdr,...data].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=fname; a.click()
+    toast('✅ Exported!'); closeDrawer()
+  }catch(e){ toast('Export error: '+e.message) }
 }
 
-// ═══════════════════════════════════════════════════
-// INIT — safe load with retry if Firebase not ready
-// ═══════════════════════════════════════════════════
-function initApp(){
-  if(typeof firebase === 'undefined'){
-    setTimeout(initApp, 100)
-    return
-  }
-  try{
-    firebase.initializeApp(FIREBASE_CONFIG)
-  }catch(e){
-    // already initialized — ignore
-  }
-  const _auth    = firebase.auth()
-  const _db      = firebase.firestore()
-  const _storage = firebase.storage()
-
-  // reassign module-level refs
-  Object.assign(window, {
-    auth:    _auth,
-    db:      _db,
-    storage: _storage
-  })
-
-  // Handle redirect result first (comes back after Google login)
-  _auth.getRedirectResult().then(async result => {
-    if(result && result.user){
-      console.log('Redirect sign-in successful:', result.user.email)
-    }
-  }).catch(e => {
-    console.error('Redirect error:', e)
-    const errEl = document.getElementById('login-error')
-    if(errEl) errEl.textContent = e.message
-  })
-
-  _auth.onAuthStateChanged(async user => {
-    document.getElementById('loading-screen').style.display = 'none'
-    if(user){
-      currentUser = user
-      console.log('Your UID:', user.uid)
-      await ensureUserProfile(user)
-      setupUserUI(user)
-      showScreen('dashboard')
-      document.getElementById('bottom-nav').style.display = 'flex'
-      if(user.uid === ADMIN_UID){
-        document.getElementById('admin-nav-btn').style.display = 'flex'
-      }
-      updateDashboard()
-    } else {
-      currentUser = null
-      showLoginScreen()
-    }
-  })
-
-  setNow('t'); setNow('w')
-}
-
-document.addEventListener('DOMContentLoaded', initApp)
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+setNow('t'); setNow('w')
 </script>
 </body>
 </html>
