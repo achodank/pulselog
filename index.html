@@ -1470,8 +1470,8 @@ async function loadAdmin(){
     window._adminUsers = []
     let totalSessions = 0, totalKm = 0
 
-    // Load each user's data in parallel batches
-    await Promise.all(users.map(async u => {
+    // Load all users in parallel — sum after all done (no race condition)
+    const results = await Promise.all(users.map(async u => {
       try{
         const [ts, ws] = await Promise.all([
           db.collection('users').doc(u.uid).collection('treadmill').get(),
@@ -1482,16 +1482,17 @@ async function loadAdmin(){
         const km = parseFloat(tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1))
         const cal = tm.reduce((s,r)=>s+(r.calories||0),0)
         const sess = tm.length + wo.length
-        totalSessions += sess
-        totalKm += km
-        window._adminUsers.push({...u, _tm:tm, _wo:wo, _km:km, _cal:cal, _sess:sess})
+        return {...u, _tm:tm, _wo:wo, _km:km, _cal:cal, _sess:sess}
       }catch(err){
-        // user data inaccessible — add with empty data
-        window._adminUsers.push({...u, _tm:[], _wo:[], _km:0, _cal:0, _sess:0})
+        console.warn('Could not load user:', u.uid, err.message)
+        return {...u, _tm:[], _wo:[], _km:0, _cal:0, _sess:0}
       }
     }))
+    // Sum after parallel — avoids race condition on totalSessions
+    results.forEach(r => { totalSessions += r._sess; totalKm += r._km })
+    window._adminUsers = results
 
-    // Sort by last active desc
+        // Sort by last active desc
     window._adminUsers.sort((a,b)=>{
       const ta = a.lastActiveAt?.toDate?.()?.getTime() || 0
       const tb = b.lastActiveAt?.toDate?.()?.getTime() || 0
@@ -1527,31 +1528,41 @@ function renderAdminTab(){
       const last = u.lastActiveAt?.toDate?.()
       const lastStr = last ? last.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' '+last.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—'
       const initials = (u.displayName||u.email||'U').slice(0,2).toUpperCase()
-      const avHtml = u.photoURL
-        ? `<img class="adm-av" src="${u.photoURL}" onerror="this.outerHTML='<div class=adm-av>${initials}</div>'" alt=""/>`
-        : `<div class="adm-av">${initials}</div>`
-      return `<div class="adm-user-card" id="auc-${idx}">
-        <div class="adm-user-header">
-          ${avHtml}
-          <div class="adm-user-info">
-            <div class="adm-uname">${u.displayName||'—'}</div>
-            <div class="adm-uemail">${u.email||''}</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px">Last active: ${lastStr}</div>
-          </div>
-        </div>
-        <div class="adm-user-stats">
-          <div class="adm-stat"><div class="adm-stat-v">${u._km}</div><div class="adm-stat-l">km</div></div>
-          <div class="adm-stat"><div class="adm-stat-v">${u._cal.toLocaleString()}</div><div class="adm-stat-l">cal</div></div>
-          <div class="adm-stat"><div class="adm-stat-v">${u._sess}</div><div class="adm-stat-l">sessions</div></div>
-        </div>
-        <div class="adm-actions">
-          <button class="adm-btn" onclick="viewAsUser(${idx})">👁 View as User</button>
-          <button class="adm-btn" onclick="adminDownloadUser(${idx})">📥 Download CSV</button>
-          <button class="adm-btn" onclick="showUserRecords(${idx},'tread')">🏃 Treadmill</button>
-          <button class="adm-btn" onclick="showUserRecords(${idx},'workout')">💪 Workouts</button>
-        </div>
-      </div>`
+      const avHtml = u.photoURL ? '<img class=\'adm-av\' src=\'' + u.photoURL + '\' alt=\'\'>' : '<div class=\'adm-av\'>' + initials + '</div>'
+      return '<div class="adm-user-card" id="auc-'+idx+'">'
+        +'<div class="adm-user-header">'
+          +avHtml
+          +'<div class="adm-user-info">'
+            +'<div class="adm-uname">'+(u.displayName||'—')+'</div>'
+            +'<div class="adm-uemail">'+(u.email||'')+'</div>'
+            +'<div style="font-size:10px;color:var(--t3);margin-top:2px">Last active: '+lastStr+'</div>'
+          +'</div>'
+        +'</div>'
+        +'<div class="adm-user-stats">'
+          +'<div class="adm-stat"><div class="adm-stat-v">'+u._km+'</div><div class="adm-stat-l">km</div></div>'
+          +'<div class="adm-stat"><div class="adm-stat-v">'+u._cal.toLocaleString()+'</div><div class="adm-stat-l">cal</div></div>'
+          +'<div class="adm-stat"><div class="adm-stat-v">'+u._sess+'</div><div class="adm-stat-l">sessions</div></div>'
+        +'</div>'
+        +'<div class="adm-actions">'
+          +'<button class="adm-btn" data-act="view" data-idx="'+idx+'">👁 View as User</button>'
+          +'<button class="adm-btn" data-act="dl" data-idx="'+idx+'">📥 Download CSV</button>'
+          +'<button class="adm-btn" data-act="tread" data-idx="'+idx+'">🏃 Treadmill</button>'
+          +'<button class="adm-btn" data-act="workout" data-idx="'+idx+'">💪 Workouts</button>'
+        +'</div>'
+      +'</div>'
     }).join('')
+
+    // Attach click handlers after DOM is set — avoids all inline onclick issues
+    el.querySelectorAll('.adm-btn[data-act]').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const act = this.dataset.act
+        const idx = parseInt(this.dataset.idx)
+        if(act==='view')    viewAsUser(idx)
+        else if(act==='dl') adminDownloadUser(idx)
+        else if(act==='tread')   showUserRecords(idx,'tread')
+        else if(act==='workout') showUserRecords(idx,'workout')
+      })
+    })
 
   } else if(currentAdminTab === 'tread'){
     let allTm = []
@@ -1573,8 +1584,13 @@ function renderAdminTab(){
             <span class="adm-tag">${r._uname}</span> ${r.date||''} ${r.time||''} · ${r.avg_speed_kmh||0} km/h${r.notes?' · '+r.notes:''}
           </div>
         </div>
-        <button class="adm-btn" style="flex-shrink:0" onclick="openAdminEdit('treadmill','${r._uid}','${r.sessionId||''}')">✏️ Edit</button>
+        <button class="adm-btn adm-edit-btn" style="flex-shrink:0" data-type="treadmill" data-uid="${r._uid}" data-sid="${r.sessionId||''}">✏️ Edit</button>
       </div>`).join('') : '<div class="empty"><p>No treadmill records</p></div>')
+    el.querySelectorAll('.adm-edit-btn').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        openAdminEdit(this.dataset.type, this.dataset.uid, this.dataset.sid)
+      })
+    })
 
   } else if(currentAdminTab === 'workout'){
     let allWo = []
@@ -1596,8 +1612,13 @@ function renderAdminTab(){
             <span class="adm-tag">${r._uname}</span> ${r.date||''} ${r.time||''} · ${r.exercises||''}
           </div>
         </div>
-        <button class="adm-btn" style="flex-shrink:0" onclick="openAdminEdit('workout','${r._uid}','${r.sessionId||''}')">✏️ Edit</button>
+        <button class="adm-btn adm-edit-btn" style="flex-shrink:0" data-type="workout" data-uid="${r._uid}" data-sid="${r.sessionId||''}">✏️ Edit</button>
       </div>`).join('') : '<div class="empty"><p>No workout records</p></div>')
+    el.querySelectorAll('.adm-edit-btn').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        openAdminEdit(this.dataset.type, this.dataset.uid, this.dataset.sid)
+      })
+    })
   }
 }
 
