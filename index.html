@@ -564,7 +564,7 @@ textarea.fi{resize:none;min-height:72px}
     </div>
 
     <!-- Viewing as banner -->
-    <div id="adm-viewing-as" style="display:none;background:rgba(255,184,48,0.12);border:1px solid var(--amb);border-radius:var(--rs);padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--amb);display:flex;align-items:center;justify-content:space-between">
+    <div id="adm-viewing-as" style="display:none;background:rgba(255,184,48,0.12);border:1px solid var(--amb);border-radius:var(--rs);padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--amb)">
       <span id="adm-viewing-label">Viewing as: —</span>
       <button onclick="stopViewingAs()" style="background:none;border:1px solid var(--amb);color:var(--amb);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--font)">Exit View</button>
     </div>
@@ -1450,48 +1450,70 @@ function getMotiv(){
 // ═══════════════════════════════════════
 async function loadAdmin(){
   if(!user || user.uid !== ADMIN_UID){
-    document.getElementById('adm-content').innerHTML = '<div class="empty"><div class="empty-i">🔒</div><p>Admin access only</p></div>'
+    const el = document.getElementById('adm-content')
+    if(el) el.innerHTML = '<div class="empty"><div class="empty-i">🔒</div><p>Admin access only</p></div>'
     return
   }
+
+  const el = document.getElementById('adm-content')
+  el.innerHTML = '<div class="loading" style="padding:32px;text-align:center;color:var(--t2)"><div class="spin" style="margin:0 auto 12px"></div>Loading all users...</div>'
+
   try{
-    const snap = await db.collection('admin/users/list').orderBy('lastActiveAt','desc').get()
-    const users = snap.docs.map(d=>d.data())
-
-    let totalSessions=0, totalKm=0
-    window._adminUsers = []
-
-    for(const u of users){
-      const [ts,ws] = await Promise.all([
-        db.collection(`users/${u.uid}/treadmill`).get(),
-        db.collection(`users/${u.uid}/workouts`).get()
-      ])
-      const tm = ts.docs.map(d=>d.data())
-      const wo = ws.docs.map(d=>d.data())
-      const km = parseFloat(tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1))
-      const cal = tm.reduce((s,r)=>s+(r.calories||0),0)
-      const sess = tm.length + wo.length
-      totalSessions += sess
-      totalKm += km
-      window._adminUsers.push({...u, _tm:tm, _wo:wo, _km:km, _cal:cal, _sess:sess})
+    // Get all users from admin/users/list — admin uid has read permission via Firestore rules
+    const snap = await db.collection('admin').doc('users').collection('list').get()
+    if(snap.empty){
+      el.innerHTML = '<div class="empty"><div class="empty-i">👥</div><p>No users registered yet.<br/>Users appear here after their first login.</p></div>'
+      return
     }
+
+    const users = snap.docs.map(d=>d.data())
+    window._adminUsers = []
+    let totalSessions = 0, totalKm = 0
+
+    // Load each user's data in parallel batches
+    await Promise.all(users.map(async u => {
+      try{
+        const [ts, ws] = await Promise.all([
+          db.collection('users').doc(u.uid).collection('treadmill').get(),
+          db.collection('users').doc(u.uid).collection('workouts').get()
+        ])
+        const tm = ts.docs.map(d=>d.data())
+        const wo = ws.docs.map(d=>d.data())
+        const km = parseFloat(tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1))
+        const cal = tm.reduce((s,r)=>s+(r.calories||0),0)
+        const sess = tm.length + wo.length
+        totalSessions += sess
+        totalKm += km
+        window._adminUsers.push({...u, _tm:tm, _wo:wo, _km:km, _cal:cal, _sess:sess})
+      }catch(err){
+        // user data inaccessible — add with empty data
+        window._adminUsers.push({...u, _tm:[], _wo:[], _km:0, _cal:0, _sess:0})
+      }
+    }))
+
+    // Sort by last active desc
+    window._adminUsers.sort((a,b)=>{
+      const ta = a.lastActiveAt?.toDate?.()?.getTime() || 0
+      const tb = b.lastActiveAt?.toDate?.()?.getTime() || 0
+      return tb - ta
+    })
 
     document.getElementById('adm-u').textContent = users.length
     document.getElementById('adm-s').textContent = totalSessions
     document.getElementById('adm-km').textContent = totalKm.toFixed(1)
 
     renderAdminTab()
-  }catch(e){ console.error('Admin:', e); document.getElementById('adm-content').innerHTML = `<div class="empty"><p>Error: ${e.message}</p></div>` }
+  }catch(e){
+    console.error('Admin load error:', e)
+    el.innerHTML = '<div class="empty"><div class="empty-i">⚠️</div><p>Error: '+e.message+'<br/><small>Check Firestore rules allow admin UID to read admin/users/list</small></p></div>'
+  }
 }
 
-let currentAdminTab = 'users'
-let viewingAsUser = null
-let currentEditRecord = null
-let currentEditType = null
 
 function setAdminTab(tab, btn){
   currentAdminTab = tab
-  document.querySelectorAll('.lb-tab').forEach(b=>b.classList.remove('on'))
-  btn.classList.add('on')
+  document.querySelectorAll('#pg-admin .lb-tab').forEach(b=>b.classList.remove('on'))
+  if(btn) btn.classList.add('on')
   renderAdminTab()
 }
 
@@ -1501,13 +1523,14 @@ function renderAdminTab(){
   if(!users.length){ el.innerHTML = '<div class="empty"><div class="empty-i">👥</div><p>No users yet</p></div>'; return }
 
   if(currentAdminTab === 'users'){
-    el.innerHTML = users.map(u=>{
+    el.innerHTML = users.map((u,idx)=>{
       const last = u.lastActiveAt?.toDate?.()
       const lastStr = last ? last.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' '+last.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—'
+      const initials = (u.displayName||u.email||'U').slice(0,2).toUpperCase()
       const avHtml = u.photoURL
-        ? `<img class="adm-av" src="${u.photoURL}" onerror="this.style.display='none'" alt=""/>`
-        : `<div class="adm-av">${(u.displayName||u.email||'U').slice(0,2).toUpperCase()}</div>`
-      return `<div class="adm-user-card">
+        ? `<img class="adm-av" src="${u.photoURL}" onerror="this.outerHTML='<div class=adm-av>${initials}</div>'" alt=""/>`
+        : `<div class="adm-av">${initials}</div>`
+      return `<div class="adm-user-card" id="auc-${idx}">
         <div class="adm-user-header">
           ${avHtml}
           <div class="adm-user-info">
@@ -1522,83 +1545,94 @@ function renderAdminTab(){
           <div class="adm-stat"><div class="adm-stat-v">${u._sess}</div><div class="adm-stat-l">sessions</div></div>
         </div>
         <div class="adm-actions">
-          <button class="adm-btn" onclick="viewAsUser('${u.uid}','${(u.displayName||u.email||'User').replace(/'/g,"\'")}')">👁 View as User</button>
-          <button class="adm-btn" onclick="adminDownloadUser('${u.uid}','${(u.displayName||'user').replace(/'/g,"\'")}')">📥 Download Data</button>
-          <button class="adm-btn" onclick="setAdminTab('tread',document.getElementById('atab-tread'));filterAdminByUser('${u.uid}')">🏃 Treadmill</button>
-          <button class="adm-btn" onclick="setAdminTab('workout',document.getElementById('atab-workout'));filterAdminByUser('${u.uid}')">💪 Workouts</button>
+          <button class="adm-btn" onclick="viewAsUser(${idx})">👁 View as User</button>
+          <button class="adm-btn" onclick="adminDownloadUser(${idx})">📥 Download CSV</button>
+          <button class="adm-btn" onclick="showUserRecords(${idx},'tread')">🏃 Treadmill</button>
+          <button class="adm-btn" onclick="showUserRecords(${idx},'workout')">💪 Workouts</button>
         </div>
       </div>`
     }).join('')
 
   } else if(currentAdminTab === 'tread'){
-    // All treadmill records across all users
     let allTm = []
-    users.forEach(u => u._tm.forEach(r => allTm.push({...r, _userName:u.displayName||u.email||'?', _uid:u.uid})))
-    allTm.sort((a,b)=>b.date?.localeCompare(a.date||'')||0)
+    users.forEach((u,ui) => u._tm.forEach(r => allTm.push({...r, _uname:u.displayName||u.email||'?', _uid:u.uid, _ui:ui})))
+    allTm.sort((a,b)=>(b.date||'').localeCompare(a.date||''))
     if(window._filterUid) allTm = allTm.filter(r=>r._uid===window._filterUid)
 
-    const filterBanner = window._filterUid
-      ? `<div style="font-size:12px;color:var(--amb);margin-bottom:10px">Filtered by user — <button onclick="window._filterUid=null;renderAdminTab()" style="background:none;border:none;color:var(--amb);text-decoration:underline;cursor:pointer;font-family:var(--font)">Clear filter</button></div>`
-      : '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">All users · tap a record to edit</div>'
+    const filterBar = window._filterUid
+      ? `<div style="font-size:12px;color:var(--amb);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <span>Filtered by user</span>
+          <button onclick="window._filterUid=null;renderAdminTab()" style="background:none;border:1px solid var(--amb);color:var(--amb);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--font)">Clear</button>
+        </div>` : ''
 
-    el.innerHTML = filterBanner + (allTm.length ? allTm.map(r=>`
+    el.innerHTML = filterBar + (allTm.length ? allTm.map(r=>`
       <div class="adm-record">
         <div class="adm-record-info">
           <div class="adm-record-title">${r.distance_km||0} km · ${r.calories||0} cal · ${r.duration_min||0} min</div>
           <div class="adm-record-sub">
-            <span class="adm-tag">${r._userName}</span>
-            ${r.date||''} ${r.time||''} · ${r.avg_speed_kmh||0} km/h
-            ${r.notes?'· '+r.notes:''}
+            <span class="adm-tag">${r._uname}</span> ${r.date||''} ${r.time||''} · ${r.avg_speed_kmh||0} km/h${r.notes?' · '+r.notes:''}
           </div>
         </div>
-        <div class="adm-record-actions">
-          <button class="adm-btn" onclick="openAdminEdit('treadmill','${r._uid}','${r.sessionId}')">✏️</button>
-        </div>
+        <button class="adm-btn" style="flex-shrink:0" onclick="openAdminEdit('treadmill','${r._uid}','${r.sessionId||''}')">✏️ Edit</button>
       </div>`).join('') : '<div class="empty"><p>No treadmill records</p></div>')
 
   } else if(currentAdminTab === 'workout'){
     let allWo = []
-    users.forEach(u => u._wo.forEach(r => allWo.push({...r, _userName:u.displayName||u.email||'?', _uid:u.uid})))
-    allWo.sort((a,b)=>b.date?.localeCompare(a.date||'')||0)
+    users.forEach((u,ui) => u._wo.forEach(r => allWo.push({...r, _uname:u.displayName||u.email||'?', _uid:u.uid, _ui:ui})))
+    allWo.sort((a,b)=>(b.date||'').localeCompare(a.date||''))
     if(window._filterUid) allWo = allWo.filter(r=>r._uid===window._filterUid)
 
-    const filterBanner = window._filterUid
-      ? `<div style="font-size:12px;color:var(--amb);margin-bottom:10px">Filtered by user — <button onclick="window._filterUid=null;renderAdminTab()" style="background:none;border:none;color:var(--amb);text-decoration:underline;cursor:pointer;font-family:var(--font)">Clear filter</button></div>`
-      : '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">All users · tap a record to edit</div>'
+    const filterBar = window._filterUid
+      ? `<div style="font-size:12px;color:var(--amb);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <span>Filtered by user</span>
+          <button onclick="window._filterUid=null;renderAdminTab()" style="background:none;border:1px solid var(--amb);color:var(--amb);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--font)">Clear</button>
+        </div>` : ''
 
-    el.innerHTML = filterBanner + (allWo.length ? allWo.map(r=>`
+    el.innerHTML = filterBar + (allWo.length ? allWo.map(r=>`
       <div class="adm-record">
         <div class="adm-record-info">
           <div class="adm-record-title">${(r.muscleGroups||[]).join(' + ')||'Workout'}</div>
           <div class="adm-record-sub">
-            <span class="adm-tag">${r._userName}</span>
-            ${r.date||''} ${r.time||''} · ${r.exercises||''}
+            <span class="adm-tag">${r._uname}</span> ${r.date||''} ${r.time||''} · ${r.exercises||''}
           </div>
         </div>
-        <div class="adm-record-actions">
-          <button class="adm-btn" onclick="openAdminEdit('workout','${r._uid}','${r.sessionId}')">✏️</button>
-        </div>
+        <button class="adm-btn" style="flex-shrink:0" onclick="openAdminEdit('workout','${r._uid}','${r.sessionId||''}')">✏️ Edit</button>
       </div>`).join('') : '<div class="empty"><p>No workout records</p></div>')
   }
 }
 
+function showUserRecords(userIdx, tab){
+  const u = (window._adminUsers||[])[userIdx]
+  if(!u) return
+  window._filterUid = u.uid
+  currentAdminTab = tab
+  document.querySelectorAll('#pg-admin .lb-tab').forEach(b=>b.classList.remove('on'))
+  document.getElementById('atab-'+tab).classList.add('on')
+  renderAdminTab()
+}
+
+
 function filterAdminByUser(uid){ window._filterUid = uid; renderAdminTab() }
 
 // ── View as user ──────────────────────────────────────────────────────────
-async function viewAsUser(uid, name){
-  viewingAsUser = uid
+async function viewAsUser(userIdx){
+  const u = (window._adminUsers||[])[userIdx]
+  if(!u) return
+  viewingAsUser = u.uid
   const banner = document.getElementById('adm-viewing-as')
-  document.getElementById('adm-viewing-label').textContent = 'Viewing as: '+name
+  document.getElementById('adm-viewing-label').textContent = 'Viewing as: '+(u.displayName||u.email||'User')
   banner.style.display = 'flex'
 
-  // Temporarily swap user context and load dashboard
-  const realUser = user
-  user = {uid, displayName:name, photoURL:'', email:''}
+  // Store real user, temporarily use selected user's uid for data queries
+  window._realUser = user
+  window._viewingUid = u.uid
   go('dash', document.getElementById('nb-dash'))
+  // Load dash with this user's uid
+  const savedUid = user.uid
+  user = {...user, uid:u.uid, displayName:u.displayName||'', _isAdminView:true}
   await loadDash()
-  user = realUser // restore
-  viewingAsUser = uid // keep tracking
-  toast('👁 Viewing as '+name+' — go to Admin to exit')
+  user = window._realUser // restore immediately after load
+  toast('👁 Viewing as '+(u.displayName||'User')+' — go to Admin to exit')
 }
 
 function stopViewingAs(){
@@ -1703,13 +1737,17 @@ async function deleteAdminRecord(){
 }
 
 // ── Download all data for a user ─────────────────────────────────────────
-async function adminDownloadUser(uid, name){
+async function adminDownloadUser(userIdx){
+  const u = (window._adminUsers||[])[userIdx]
+  if(!u) return
+  const uid = u.uid
+  const name = u.displayName || u.email || 'user'
   try{
     toast('⏳ Preparing download...')
     const [ts,ws,wts] = await Promise.all([
-      db.collection('users/'+uid+'/treadmill').orderBy('date','desc').get(),
-      db.collection('users/'+uid+'/workouts').orderBy('date','desc').get(),
-      db.collection('users/'+uid+'/weight').orderBy('date','desc').get()
+      db.collection('users').doc(uid).collection('treadmill').orderBy('date','desc').get(),
+      db.collection('users').doc(uid).collection('workouts').orderBy('date','desc').get(),
+      db.collection('users').doc(uid).collection('weight').orderBy('date','desc').get()
     ])
     const esc = v => '"'+String(v||'').replace(/"/g,'""')+'"'
     const row = r => r.map(esc).join(',')
