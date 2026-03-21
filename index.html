@@ -247,6 +247,28 @@ textarea.fi{resize:none;min-height:72px}
 .share-stat-v{font-size:22px;font-weight:700;color:var(--g);line-height:1}
 .share-stat-l{font-size:10px;color:#666;margin-top:3px}
 .share-date{font-size:11px;color:#444}
+
+/* ADMIN */
+.adm-user-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.adm-user-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.adm-av{width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--b2);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--t2);flex-shrink:0}
+.adm-user-info{flex:1;min-width:0}
+.adm-uname{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-uemail{font-size:11px;color:var(--t3)}
+.adm-user-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.adm-stat{background:var(--bg3);border-radius:var(--rs);padding:8px;text-align:center}
+.adm-stat-v{font-size:16px;font-weight:700;color:var(--g)}
+.adm-stat-l{font-size:10px;color:var(--t3);margin-top:2px}
+.adm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.adm-btn{padding:6px 12px;border-radius:20px;border:1px solid var(--b);background:var(--bg3);color:var(--t2);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);transition:all .15s}
+.adm-btn:hover{border-color:var(--g);color:var(--g)}
+.adm-btn.danger{border-color:rgba(255,71,87,.3);color:var(--red)}
+.adm-record{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.adm-record-info{flex:1;min-width:0}
+.adm-record-title{font-size:13px;font-weight:500}
+.adm-record-sub{font-size:11px;color:var(--t3);margin-top:2px}
+.adm-record-actions{display:flex;gap:6px;flex-shrink:0}
+.adm-tag{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg4);color:var(--t3);margin-right:4px}
 </style>
 </head>
 <body>
@@ -519,16 +541,52 @@ textarea.fi{resize:none;min-height:72px}
 <!-- ═══ ADMIN ═══ -->
 <div class="pg" id="pg-admin">
   <div class="topbar">
-    <div class="topbar-h">🛡 Admin</div>
-    <button class="btn bs" style="width:auto;padding:6px 14px;font-size:12px" onclick="loadAdmin()">Refresh</button>
+    <div class="topbar-l">
+      <div class="topbar-tag">Super Admin</div>
+      <div class="topbar-h">🛡 Admin Panel</div>
+    </div>
+    <button class="btn bs" style="width:auto;padding:6px 14px;font-size:12px" onclick="loadAdmin()">↻ Refresh</button>
   </div>
   <div class="body">
-    <div class="kgrid">
+
+    <!-- Admin KPIs -->
+    <div class="kgrid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px">
       <div class="kpi kg"><div class="kv" id="adm-u">—</div><div class="kl">Users</div></div>
-      <div class="kpi kb"><div class="kv" id="adm-s">—</div><div class="kl">Total Sessions</div></div>
+      <div class="kpi kb"><div class="kv" id="adm-s">—</div><div class="kl">Sessions</div></div>
+      <div class="kpi ka"><div class="kv" id="adm-km">—</div><div class="kl">Total km</div></div>
     </div>
-    <div class="cl" style="padding:0 2px;margin-bottom:8px">All Users</div>
-    <div id="adm-list"><div class="empty"><div class="empty-i">👥</div><p>Loading...</p></div></div>
+
+    <!-- Admin tabs -->
+    <div class="lb-tabs" style="margin-bottom:14px">
+      <button class="lb-tab on" id="atab-users" onclick="setAdminTab('users',this)">👥 Users</button>
+      <button class="lb-tab" id="atab-tread" onclick="setAdminTab('tread',this)">🏃 Treadmill</button>
+      <button class="lb-tab" id="atab-workout" onclick="setAdminTab('workout',this)">💪 Workouts</button>
+    </div>
+
+    <!-- Viewing as banner -->
+    <div id="adm-viewing-as" style="display:none;background:rgba(255,184,48,0.12);border:1px solid var(--amb);border-radius:var(--rs);padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--amb);display:flex;align-items:center;justify-content:space-between">
+      <span id="adm-viewing-label">Viewing as: —</span>
+      <button onclick="stopViewingAs()" style="background:none;border:1px solid var(--amb);color:var(--amb);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--font)">Exit View</button>
+    </div>
+
+    <!-- Admin content area -->
+    <div id="adm-content">
+      <div class="empty"><div class="empty-i">👥</div><p>Loading users...</p></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Admin Edit Modal -->
+<div id="adm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:600;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:var(--bg2);border-radius:var(--r);padding:20px;width:100%;max-width:420px;margin-top:20px">
+    <div class="cl" id="adm-modal-title" style="margin-bottom:14px">Edit Record</div>
+    <div id="adm-modal-body"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn bg" style="flex:1" onclick="saveAdminEdit()">💾 Save</button>
+      <button class="btn bd" style="flex:1" onclick="deleteAdminRecord()">🗑 Delete</button>
+      <button class="btn bs" style="flex:1" onclick="closeAdminModal()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -1392,25 +1450,298 @@ function getMotiv(){
 // ═══════════════════════════════════════
 async function loadAdmin(){
   if(!user || user.uid !== ADMIN_UID){
-    document.getElementById('pg-admin').innerHTML = '<div class="topbar"><div class="topbar-h">🛡 Admin</div></div><div class="body"><div class="empty"><div class="empty-i">🔒</div><p>Admin access only</p></div></div>'
+    document.getElementById('adm-content').innerHTML = '<div class="empty"><div class="empty-i">🔒</div><p>Admin access only</p></div>'
     return
   }
   try{
-    const snap=await db.collection('admin/users/list').orderBy('lastActiveAt','desc').get()
-    const users=snap.docs.map(d=>d.data())
-    document.getElementById('adm-u').textContent=users.length
-    let total=0
-    const listEl=document.getElementById('adm-list'); listEl.innerHTML=''
+    const snap = await db.collection('admin/users/list').orderBy('lastActiveAt','desc').get()
+    const users = snap.docs.map(d=>d.data())
+
+    let totalSessions=0, totalKm=0
+    window._adminUsers = []
+
     for(const u of users){
-      const [ts,ws]=await Promise.all([db.collection(`users/${u.uid}/treadmill`).get(),db.collection(`users/${u.uid}/workouts`).get()])
-      const sess=ts.size+ws.size; total+=sess
-      const last=u.lastActiveAt?.toDate()
-      const lastStr=last?last.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' '+last.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'—'
-      const avHtml=u.photoURL?`<img class="au-av" src="${u.photoURL}" onerror="this.textContent='${(u.displayName||'U').slice(0,2).toUpperCase()}'" alt=""/>`:`<div class="au-av">${(u.displayName||u.email||'U').slice(0,2).toUpperCase()}</div>`
-      listEl.innerHTML+=`<div class="au">${avHtml}<div class="au-info"><div class="au-name">${u.displayName||'—'}</div><div class="au-email">${u.email||''}</div><div style="font-size:10px;color:var(--t3);margin-top:2px">Last: ${lastStr}</div></div><div class="au-stats"><div class="au-sv">${sess}</div><div class="au-sl">sessions</div></div></div>`
+      const [ts,ws] = await Promise.all([
+        db.collection(`users/${u.uid}/treadmill`).get(),
+        db.collection(`users/${u.uid}/workouts`).get()
+      ])
+      const tm = ts.docs.map(d=>d.data())
+      const wo = ws.docs.map(d=>d.data())
+      const km = parseFloat(tm.reduce((s,r)=>s+(r.distance_km||0),0).toFixed(1))
+      const cal = tm.reduce((s,r)=>s+(r.calories||0),0)
+      const sess = tm.length + wo.length
+      totalSessions += sess
+      totalKm += km
+      window._adminUsers.push({...u, _tm:tm, _wo:wo, _km:km, _cal:cal, _sess:sess})
     }
-    document.getElementById('adm-s').textContent=total
-  }catch(e){ console.error('Admin:',e) }
+
+    document.getElementById('adm-u').textContent = users.length
+    document.getElementById('adm-s').textContent = totalSessions
+    document.getElementById('adm-km').textContent = totalKm.toFixed(1)
+
+    renderAdminTab()
+  }catch(e){ console.error('Admin:', e); document.getElementById('adm-content').innerHTML = `<div class="empty"><p>Error: ${e.message}</p></div>` }
+}
+
+let currentAdminTab = 'users'
+let viewingAsUser = null
+let currentEditRecord = null
+let currentEditType = null
+
+function setAdminTab(tab, btn){
+  currentAdminTab = tab
+  document.querySelectorAll('.lb-tab').forEach(b=>b.classList.remove('on'))
+  btn.classList.add('on')
+  renderAdminTab()
+}
+
+function renderAdminTab(){
+  const el = document.getElementById('adm-content')
+  const users = window._adminUsers || []
+  if(!users.length){ el.innerHTML = '<div class="empty"><div class="empty-i">👥</div><p>No users yet</p></div>'; return }
+
+  if(currentAdminTab === 'users'){
+    el.innerHTML = users.map(u=>{
+      const last = u.lastActiveAt?.toDate?.()
+      const lastStr = last ? last.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' '+last.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—'
+      const avHtml = u.photoURL
+        ? `<img class="adm-av" src="${u.photoURL}" onerror="this.style.display='none'" alt=""/>`
+        : `<div class="adm-av">${(u.displayName||u.email||'U').slice(0,2).toUpperCase()}</div>`
+      return `<div class="adm-user-card">
+        <div class="adm-user-header">
+          ${avHtml}
+          <div class="adm-user-info">
+            <div class="adm-uname">${u.displayName||'—'}</div>
+            <div class="adm-uemail">${u.email||''}</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px">Last active: ${lastStr}</div>
+          </div>
+        </div>
+        <div class="adm-user-stats">
+          <div class="adm-stat"><div class="adm-stat-v">${u._km}</div><div class="adm-stat-l">km</div></div>
+          <div class="adm-stat"><div class="adm-stat-v">${u._cal.toLocaleString()}</div><div class="adm-stat-l">cal</div></div>
+          <div class="adm-stat"><div class="adm-stat-v">${u._sess}</div><div class="adm-stat-l">sessions</div></div>
+        </div>
+        <div class="adm-actions">
+          <button class="adm-btn" onclick="viewAsUser('${u.uid}','${(u.displayName||u.email||'User').replace(/'/g,"\'")}')">👁 View as User</button>
+          <button class="adm-btn" onclick="adminDownloadUser('${u.uid}','${(u.displayName||'user').replace(/'/g,"\'")}')">📥 Download Data</button>
+          <button class="adm-btn" onclick="setAdminTab('tread',document.getElementById('atab-tread'));filterAdminByUser('${u.uid}')">🏃 Treadmill</button>
+          <button class="adm-btn" onclick="setAdminTab('workout',document.getElementById('atab-workout'));filterAdminByUser('${u.uid}')">💪 Workouts</button>
+        </div>
+      </div>`
+    }).join('')
+
+  } else if(currentAdminTab === 'tread'){
+    // All treadmill records across all users
+    let allTm = []
+    users.forEach(u => u._tm.forEach(r => allTm.push({...r, _userName:u.displayName||u.email||'?', _uid:u.uid})))
+    allTm.sort((a,b)=>b.date?.localeCompare(a.date||'')||0)
+    if(window._filterUid) allTm = allTm.filter(r=>r._uid===window._filterUid)
+
+    const filterBanner = window._filterUid
+      ? `<div style="font-size:12px;color:var(--amb);margin-bottom:10px">Filtered by user — <button onclick="window._filterUid=null;renderAdminTab()" style="background:none;border:none;color:var(--amb);text-decoration:underline;cursor:pointer;font-family:var(--font)">Clear filter</button></div>`
+      : '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">All users · tap a record to edit</div>'
+
+    el.innerHTML = filterBanner + (allTm.length ? allTm.map(r=>`
+      <div class="adm-record">
+        <div class="adm-record-info">
+          <div class="adm-record-title">${r.distance_km||0} km · ${r.calories||0} cal · ${r.duration_min||0} min</div>
+          <div class="adm-record-sub">
+            <span class="adm-tag">${r._userName}</span>
+            ${r.date||''} ${r.time||''} · ${r.avg_speed_kmh||0} km/h
+            ${r.notes?'· '+r.notes:''}
+          </div>
+        </div>
+        <div class="adm-record-actions">
+          <button class="adm-btn" onclick="openAdminEdit('treadmill','${r._uid}','${r.sessionId}')">✏️</button>
+        </div>
+      </div>`).join('') : '<div class="empty"><p>No treadmill records</p></div>')
+
+  } else if(currentAdminTab === 'workout'){
+    let allWo = []
+    users.forEach(u => u._wo.forEach(r => allWo.push({...r, _userName:u.displayName||u.email||'?', _uid:u.uid})))
+    allWo.sort((a,b)=>b.date?.localeCompare(a.date||'')||0)
+    if(window._filterUid) allWo = allWo.filter(r=>r._uid===window._filterUid)
+
+    const filterBanner = window._filterUid
+      ? `<div style="font-size:12px;color:var(--amb);margin-bottom:10px">Filtered by user — <button onclick="window._filterUid=null;renderAdminTab()" style="background:none;border:none;color:var(--amb);text-decoration:underline;cursor:pointer;font-family:var(--font)">Clear filter</button></div>`
+      : '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">All users · tap a record to edit</div>'
+
+    el.innerHTML = filterBanner + (allWo.length ? allWo.map(r=>`
+      <div class="adm-record">
+        <div class="adm-record-info">
+          <div class="adm-record-title">${(r.muscleGroups||[]).join(' + ')||'Workout'}</div>
+          <div class="adm-record-sub">
+            <span class="adm-tag">${r._userName}</span>
+            ${r.date||''} ${r.time||''} · ${r.exercises||''}
+          </div>
+        </div>
+        <div class="adm-record-actions">
+          <button class="adm-btn" onclick="openAdminEdit('workout','${r._uid}','${r.sessionId}')">✏️</button>
+        </div>
+      </div>`).join('') : '<div class="empty"><p>No workout records</p></div>')
+  }
+}
+
+function filterAdminByUser(uid){ window._filterUid = uid; renderAdminTab() }
+
+// ── View as user ──────────────────────────────────────────────────────────
+async function viewAsUser(uid, name){
+  viewingAsUser = uid
+  const banner = document.getElementById('adm-viewing-as')
+  document.getElementById('adm-viewing-label').textContent = 'Viewing as: '+name
+  banner.style.display = 'flex'
+
+  // Temporarily swap user context and load dashboard
+  const realUser = user
+  user = {uid, displayName:name, photoURL:'', email:''}
+  go('dash', document.getElementById('nb-dash'))
+  await loadDash()
+  user = realUser // restore
+  viewingAsUser = uid // keep tracking
+  toast('👁 Viewing as '+name+' — go to Admin to exit')
+}
+
+function stopViewingAs(){
+  viewingAsUser = null
+  document.getElementById('adm-viewing-as').style.display = 'none'
+  toast('✅ Returned to admin view')
+  loadAdmin()
+}
+
+// ── Edit record ───────────────────────────────────────────────────────────
+async function openAdminEdit(type, uid, sessionId){
+  currentEditType = type
+  const ref = db.doc(`users/${uid}/${type==='treadmill'?'treadmill':'workouts'}/${sessionId}`)
+  const snap = await ref.get()
+  if(!snap.exists){ toast('Record not found'); return }
+  const r = snap.data()
+  currentEditRecord = {ref, data:r, uid, sessionId}
+
+  document.getElementById('adm-modal-title').textContent = type==='treadmill' ? '✏️ Edit Treadmill Session' : '✏️ Edit Workout'
+  const body = document.getElementById('adm-modal-body')
+
+  if(type==='treadmill'){
+    body.innerHTML = `
+      <div class="g2" style="margin-bottom:10px">
+        <div><label class="fl">Date</label><input class="fi" id="ae-date" type="date" value="${r.date||''}"/></div>
+        <div><label class="fl">Time</label><input class="fi" id="ae-time" type="time" value="${r.time||''}"/></div>
+      </div>
+      <div class="g2" style="margin-bottom:10px">
+        <div><label class="fl">Distance (km)</label><input class="fi" id="ae-km" type="number" step="0.01" value="${r.distance_km||''}"/></div>
+        <div><label class="fl">Calories</label><input class="fi" id="ae-cal" type="number" value="${r.calories||''}"/></div>
+      </div>
+      <div class="g2" style="margin-bottom:10px">
+        <div><label class="fl">Duration (min)</label><input class="fi" id="ae-dur" type="number" value="${r.duration_min||''}"/></div>
+        <div><label class="fl">Speed (km/h)</label><input class="fi" id="ae-spd" type="number" step="0.01" value="${r.avg_speed_kmh||''}"/></div>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="ae-notes">${r.notes||''}</textarea></div>`
+  } else {
+    body.innerHTML = `
+      <div class="g2" style="margin-bottom:10px">
+        <div><label class="fl">Date</label><input class="fi" id="ae-date" type="date" value="${r.date||''}"/></div>
+        <div><label class="fl">Time</label><input class="fi" id="ae-time" type="time" value="${r.time||''}"/></div>
+      </div>
+      <div class="fg"><label class="fl">Muscle Groups</label><input class="fi" id="ae-muscle" value="${(r.muscleGroups||[]).join(', ')}"/></div>
+      <div class="fg"><label class="fl">Exercises</label><textarea class="fi" id="ae-exercises">${r.exercises||''}</textarea></div>
+      <div class="g2" style="margin-bottom:10px">
+        <div><label class="fl">Sets</label><input class="fi" id="ae-sets" type="number" value="${r.sets||''}"/></div>
+        <div><label class="fl">Reps</label><input class="fi" id="ae-reps" type="number" value="${r.reps||''}"/></div>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="ae-notes">${r.notes||''}</textarea></div>`
+  }
+
+  document.getElementById('adm-modal').style.display = 'flex'
+}
+
+function closeAdminModal(){
+  document.getElementById('adm-modal').style.display = 'none'
+  currentEditRecord = null
+}
+
+async function saveAdminEdit(){
+  if(!currentEditRecord) return
+  const {ref} = currentEditRecord
+  let updates = {}
+  if(currentEditType==='treadmill'){
+    updates = {
+      date: document.getElementById('ae-date').value,
+      time: document.getElementById('ae-time').value,
+      distance_km: parseFloat(document.getElementById('ae-km').value)||0,
+      calories: parseInt(document.getElementById('ae-cal').value)||0,
+      duration_min: parseInt(document.getElementById('ae-dur').value)||0,
+      avg_speed_kmh: parseFloat(document.getElementById('ae-spd').value)||0,
+      notes: document.getElementById('ae-notes').value||''
+    }
+  } else {
+    updates = {
+      date: document.getElementById('ae-date').value,
+      time: document.getElementById('ae-time').value,
+      muscleGroups: document.getElementById('ae-muscle').value.split(',').map(s=>s.trim()).filter(Boolean),
+      exercises: document.getElementById('ae-exercises').value||'',
+      sets: parseInt(document.getElementById('ae-sets').value)||0,
+      reps: parseInt(document.getElementById('ae-reps').value)||0,
+      notes: document.getElementById('ae-notes').value||''
+    }
+  }
+  try{
+    await ref.update(updates)
+    toast('✅ Record updated!')
+    closeAdminModal()
+    loadAdmin()
+  }catch(e){ toast('❌ Update failed: '+e.message) }
+}
+
+async function deleteAdminRecord(){
+  if(!currentEditRecord) return
+  if(!confirm('Delete this record permanently? This cannot be undone.')) return
+  try{
+    await currentEditRecord.ref.delete()
+    toast('🗑 Record deleted')
+    closeAdminModal()
+    loadAdmin()
+  }catch(e){ toast('❌ Delete failed: '+e.message) }
+}
+
+// ── Download all data for a user ─────────────────────────────────────────
+async function adminDownloadUser(uid, name){
+  try{
+    toast('⏳ Preparing download...')
+    const [ts,ws,wts] = await Promise.all([
+      db.collection('users/'+uid+'/treadmill').orderBy('date','desc').get(),
+      db.collection('users/'+uid+'/workouts').orderBy('date','desc').get(),
+      db.collection('users/'+uid+'/weight').orderBy('date','desc').get()
+    ])
+    const esc = v => '"'+String(v||'').replace(/"/g,'""')+'"'
+    const row = r => r.map(esc).join(',')
+
+    const tmHdr = ['Date','Time','Distance (km)','Calories','Duration (min)','Speed (km/h)','Notes']
+    const tmRows = ts.docs.map(d=>{ const r=d.data(); return [r.date,r.time,r.distance_km,r.calories,r.duration_min,r.avg_speed_kmh,r.notes||''] })
+
+    const woHdr = ['Date','Time','Muscle Groups','Exercises','Sets','Reps','Energy','Notes']
+    const woRows = ws.docs.map(d=>{ const r=d.data(); return [r.date,r.time,(r.muscleGroups||[]).join('+'),r.exercises||'',r.sets,r.reps,r.energyLevel||'',r.notes||''] })
+
+    const wtHdr = ['Date','Weight (kg)']
+    const wtRows = wts.docs.map(d=>{ const r=d.data(); return [r.date,r.kg] })
+
+    const sep = '\n'
+    const sections = [
+      'TREADMILL SESSIONS ('+tmRows.length+' records)',
+      [tmHdr].concat(tmRows).map(row).join(sep),
+      '',
+      'WORKOUTS ('+woRows.length+' records)',
+      [woHdr].concat(woRows).map(row).join(sep),
+      '',
+      'WEIGHT LOG ('+wtRows.length+' records)',
+      [wtHdr].concat(wtRows).map(row).join(sep)
+    ]
+    const csv = sections.join(sep)
+    const safeName = name.replace(/[^a-z0-9]/gi,'_')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}))
+    a.download = 'pulselog_'+safeName+'_'+new Date().toISOString().split('T')[0]+'.csv'
+    a.click()
+    toast('✅ Downloaded!')
+  }catch(e){ toast('Download failed: '+e.message) }
 }
 
 // ═══════════════════════════════════════
